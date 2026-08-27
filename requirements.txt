@@ -1,4 +1,4 @@
-﻿fastapi
+fastapi
 uvicorn[standard]
 sqlalchemy
 asyncpg
@@ -10,6 +10,5 @@ python-multipart
 langchain
 langgraph
 email-validator
+email-validator
 httpx
-pypdf
-python-docx
