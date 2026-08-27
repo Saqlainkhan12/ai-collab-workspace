@@ -1,4 +1,4 @@
-﻿from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import DeclarativeBase
 from app.core.config import settings
 
@@ -17,6 +17,25 @@ if database_url.startswith("postgres://"):
         "postgresql+asyncpg://",
         1
     )
+
+# asyncpg uses "ssl", not "sslmode", and does not need
+# the PostgreSQL channel_binding query parameter here.
+database_url = database_url.replace(
+    "sslmode=require",
+    "ssl=require"
+)
+database_url = database_url.replace(
+    "&channel_binding=require",
+    ""
+)
+database_url = database_url.replace(
+    "?channel_binding=require&",
+    "?"
+)
+database_url = database_url.replace(
+    "?channel_binding=require",
+    ""
+)
 
 engine = create_async_engine(
     database_url,
