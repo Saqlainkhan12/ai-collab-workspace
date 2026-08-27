@@ -4,56 +4,53 @@ import httpx
 from app.core.config import settings
 
 
-class LocalOllamaModel:
+class OpenAIModel:
 
-    def __init__(
-        self,
-        model_name: str,
-        base_url: str = "http://127.0.0.1:11434",
-        temperature: float = 0.2,
-    ):
+    def __init__(self, model_name: str, temperature: float = 0.2):
         self.model_name = model_name
-        self.model = model_name
-        self.base_url = base_url.rstrip("/")
         self.temperature = temperature
 
     async def ainvoke(self, messages):
-        ollama_messages = []
+        if not settings.OPENAI_API_KEY:
+            raise RuntimeError("OPENAI_API_KEY is not configured")
 
-        for role, content in messages:
-            ollama_messages.append(
+        payload = {
+            "model": self.model_name,
+            "messages": [
                 {
                     "role": role,
                     "content": content,
                 }
-            )
+                for role, content in messages
+            ],
+            "temperature": self.temperature,
+        }
 
-        payload = {
-            "model": self.model_name,
-            "messages": ollama_messages,
-            "stream": False,
-            "options": {
-                "temperature": self.temperature,
-            },
+        headers = {
+            "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
+            "Content-Type": "application/json",
         }
 
         async with httpx.AsyncClient(timeout=180.0) as client:
             response = await client.post(
-                f"{self.base_url}/api/chat",
+                "https://api.openai.com/v1/chat/completions",
+                headers=headers,
                 json=payload,
             )
 
-        response.raise_for_status()
+        if response.status_code >= 400:
+            raise RuntimeError(
+                f"OpenAI API error {response.status_code}: {response.text[:1000]}"
+            )
 
         data = response.json()
 
-        message = data.get("message", {})
-        content = message.get("content")
-
-        if not content:
+        try:
+            content = data["choices"][0]["message"]["content"]
+        except (KeyError, IndexError, TypeError) as exc:
             raise RuntimeError(
-                f"Ollama returned an invalid response: {data}"
-            )
+                f"Invalid OpenAI response: {data}"
+            ) from exc
 
         return type(
             "AIResponse",
@@ -80,12 +77,11 @@ class ModelRouter:
             project_config or {}
         ).get(
             "model_name",
-            settings.DEFAULT_MODEL or "llama3.2:3b",
+            settings.DEFAULT_MODEL or "gpt-4o-mini",
         )
 
-        return LocalOllamaModel(
+        return OpenAIModel(
             model_name=model_name,
-            base_url="http://127.0.0.1:11434",
             temperature=0.2,
         )
 

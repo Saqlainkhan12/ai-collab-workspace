@@ -1,4 +1,4 @@
-﻿from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -116,7 +116,7 @@ async def upload_document(
                     chunk_index=index,
                     content=chunk,
                     embedding=vector,
-                    metadata={
+                    chunk_metadata={
                         "filename": file.filename,
                         "content_type": file.content_type,
                     },
