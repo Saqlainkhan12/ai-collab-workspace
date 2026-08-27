@@ -1,0 +1,44 @@
+﻿# Node / Next.js
+node_modules/
+.next/
+out/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+env/
+
+# Local backups
+*.backup.*
+*.backup-*
+*.before-*.css
+*.before-*.jsx
+*.final-backup.*
+*.final-safe.*
+*-safe.jsx
+*-safe.css
+*.safe.jsx
+*.safe.css
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Backend local backups
+backend/app/models/_model_backups_final/
+backend/app/models/*.before-*.txt

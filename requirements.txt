@@ -1,0 +1,11 @@
+﻿fastapi
+uvicorn[standard]
+sqlalchemy
+asyncpg
+psycopg2-binary
+pgvector
+pydantic-settings
+python-dotenv
+python-multipart
+langchain
+langgraph
