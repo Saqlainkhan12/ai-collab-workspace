@@ -9,16 +9,29 @@ async def get_current_user(
     x_user_id: int = Header(default=1),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(
-        select(User).where(User.id == x_user_id)
-    )
+    result = await db.execute(select(User).where(User.id == x_user_id))
     user = result.scalar_one_or_none()
 
     if not user:
-        raise HTTPException(
-            status_code=401,
-            detail="Authentication required"
+        first_user_res = await db.execute(
+            select(User).order_by(User.id.asc()).limit(1)
         )
+        first_user = first_user_res.scalar_one_or_none()
+
+        if first_user and x_user_id == 1:
+            return first_user
+
+        if not first_user:
+            default_user = User(
+                name="Saqlain",
+                email="saqlain@workspace.ai",
+            )
+            db.add(default_user)
+            await db.commit()
+            await db.refresh(default_user)
+            return default_user
+
+        raise HTTPException(status_code=401, detail="Authentication required")
 
     return user
 

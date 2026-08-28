@@ -1,8 +1,8 @@
-﻿import os
+import os
 import re
 from pathlib import Path
 
-UPLOAD_DIR = Path("storage/documents")
+UPLOAD_DIR = Path("/tmp/uploads")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 ALLOWED_EXTENSIONS = {
