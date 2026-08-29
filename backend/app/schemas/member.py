@@ -1,4 +1,4 @@
-﻿from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ConfigDict
 
 class MemberAdd(BaseModel):
     email: EmailStr
@@ -15,3 +15,6 @@ class MemberResponse(BaseModel):
     name: str
     email: str
     role: str
+
+    model_config = ConfigDict(from_attributes=True)
+

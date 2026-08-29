@@ -1,11 +1,11 @@
-﻿from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 class ProjectCreate(BaseModel):
     name: str
     description: str | None = None
-    icon: str | None = None
-    theme: str | None = None
-    instructions: str = ""
+    icon: str | None = "✦"
+    theme: str | None = "dark"
+    instructions: str | None = ""
 
 
 class ProjectUpdate(BaseModel):
@@ -19,8 +19,11 @@ class ProjectUpdate(BaseModel):
 class ProjectResponse(BaseModel):
     id: int
     name: str
-    description: str | None
-    icon: str | None
-    theme: str | None
-    instructions: str
+    description: str | None = None
+    icon: str | None = None
+    theme: str | None = None
+    instructions: str | None = ""
     owner_id: int
+
+    model_config = ConfigDict(from_attributes=True)
+

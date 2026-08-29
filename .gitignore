@@ -47,3 +47,5 @@ backend/app/models/*.before-*.txt
 backend/storage/documents/*
 !backend/storage/documents/.gitkeep
 
+.vercel
+.env*

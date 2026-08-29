@@ -10,20 +10,16 @@ app = FastAPI(
     version="0.1.0"
 )
 
-cors_origins = list(
-    {
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
         settings.FRONTEND_URL.rstrip("/"),
         "http://localhost:3000",
-        "https://ai-collab-workspace-frontend.vercel.app",
         "http://127.0.0.1:3000",
         "http://localhost:8000",
         "http://127.0.0.1:8000",
-    }
-)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=cors_origins,
+    ],
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

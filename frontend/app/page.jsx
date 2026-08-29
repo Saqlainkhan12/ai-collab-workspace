@@ -2,7 +2,11 @@
 
 import { useEffect, useState } from "react";
 
-const API = ((process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000").replace(/\/$/, "")) + "/api";
+const API = (
+  typeof window !== "undefined" && !process.env.NEXT_PUBLIC_API_URL
+    ? "/api"
+    : ((process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000").replace(/\/$/, "")) + "/api"
+);
 
 const headers = {
   "Content-Type": "application/json",
@@ -81,8 +85,8 @@ export default function Home() {
         method: "POST",
         headers,
         body: JSON.stringify({
-          name: projectName,
-          description: projectDescription,
+          name: projectName.trim(),
+          description: projectDescription.trim(),
           icon: "✦",
           theme: "dark",
           instructions: "",
@@ -90,12 +94,13 @@ export default function Home() {
       });
 
       if (!response.ok) {
-        throw new Error(await response.text());
+        const errorText = await response.text();
+        throw new Error(errorText || `HTTP ${response.status}`);
       }
 
       const project = await response.json();
 
-      setProjects((current) => [project, ...current]);
+      setProjects((current) => [project, ...current.filter((p) => p.id !== project.id)]);
       setActiveProject(project);
 
       setProjectName("");
@@ -104,9 +109,10 @@ export default function Home() {
       setView("dashboard");
 
       setMessage("Project successfully create ho gaya.");
+      await loadProjects();
     } catch (error) {
-      console.error(error);
-      setMessage("Project create nahi ho saka.");
+      console.error("Create project error:", error);
+      setMessage(`Project create nahi ho saka: ${error.message || "Error"}`);
     }
   }
 
