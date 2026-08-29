@@ -10,5 +10,8 @@ python-multipart
 langchain
 langgraph
 email-validator
-email-validator
 httpx
+pypdf
+python-docx
+pytest
+pytest-asyncio

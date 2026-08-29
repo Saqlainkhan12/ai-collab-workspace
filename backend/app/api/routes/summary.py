@@ -1,4 +1,4 @@
-﻿from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -52,6 +52,12 @@ async def summarize_conversation(
         conversation_id=conversation_id,
         model=model,
     )
+
+    if not summary:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot summarize empty conversation",
+        )
 
     return {
         "id": summary.id,

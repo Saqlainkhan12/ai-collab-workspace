@@ -2,8 +2,14 @@ import os
 import re
 from pathlib import Path
 
-UPLOAD_DIR = Path("/tmp/uploads")
-UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+BACKEND_STORAGE = Path(__file__).resolve().parent.parent.parent / "storage" / "documents"
+try:
+    BACKEND_STORAGE.mkdir(parents=True, exist_ok=True)
+    UPLOAD_DIR = BACKEND_STORAGE
+except (OSError, PermissionError):
+    UPLOAD_DIR = Path("/tmp/uploads")
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
 
 ALLOWED_EXTENSIONS = {
     ".txt",

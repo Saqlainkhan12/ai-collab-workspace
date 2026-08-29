@@ -1,4 +1,4 @@
-﻿from sqlalchemy import select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.documents import DocumentChunk
@@ -38,7 +38,7 @@ async def retrieve(
             "content": chunk.content,
             "page_number": chunk.page_number,
             "section": chunk.section,
-            "metadata": chunk.metadata,
+            "metadata": chunk.chunk_metadata,
             "score": round(
                 max(0.0, 1.0 - float(distance_value)),
                 4

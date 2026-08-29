@@ -1,4 +1,4 @@
-﻿from sqlalchemy import select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.memory import Memory
@@ -64,33 +64,20 @@ async def retrieve_memories(
 
     from sqlalchemy import or_
 
-    conditions.append(
-        or_(
-            Memory.scope == "project",
+    scope_clauses = [Memory.scope == "project"]
 
-            (
-                (Memory.scope == "conversation")
-                &
-                (
-                    Memory.conversation_id
-                    == conversation_id
-                )
-            )
-            if conversation_id
-            else False,
-
-            (
-                (Memory.scope == "user")
-                &
-                (
-                    Memory.user_id
-                    == user_id
-                )
-            )
-            if user_id
-            else False,
+    if conversation_id:
+        scope_clauses.append(
+            (Memory.scope == "conversation")
+            & (Memory.conversation_id == conversation_id)
         )
-    )
+
+    if user_id:
+        scope_clauses.append(
+            (Memory.scope == "user") & (Memory.user_id == user_id)
+        )
+
+    conditions.append(or_(*scope_clauses))
 
     distance = Memory.embedding.cosine_distance(
         vector

@@ -75,7 +75,7 @@ async def upload_document(
 
     content = await file.read()
 
-    document = None
+    document: Document | None = None
 
     try:
         file_path = save_document(

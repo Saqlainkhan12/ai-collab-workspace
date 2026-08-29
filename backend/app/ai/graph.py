@@ -1,4 +1,4 @@
-﻿from langgraph.graph import (
+from langgraph.graph import (
     StateGraph,
     START,
     END,
@@ -9,6 +9,7 @@ from app.ai.state import WorkspaceState
 
 def build_workspace_graph():
 
+    # pyrefly: ignore [bad-specialization]
     graph = StateGraph(
         WorkspaceState
     )

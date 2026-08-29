@@ -1,4 +1,4 @@
-﻿# Node / Next.js
+# Node / Next.js
 node_modules/
 .next/
 out/
@@ -42,3 +42,8 @@ Thumbs.db
 # Backend local backups
 backend/app/models/_model_backups_final/
 backend/app/models/*.before-*.txt
+
+# Storage
+backend/storage/documents/*
+!backend/storage/documents/.gitkeep
+
