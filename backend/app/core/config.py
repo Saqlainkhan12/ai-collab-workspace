@@ -1,18 +1,28 @@
-﻿from pydantic_settings import BaseSettings, SettingsConfigDict
+import os
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
 
-    DATABASE_URL: str = (
-        "postgresql+asyncpg://workspace:"
-        "workspace@localhost:5432/ai_collab"
+    DATABASE_URL: str = os.getenv(
+        "DATABASE_URL",
+        "postgresql://neondb_owner:npg_gkd5sjTZLO3M@ep-bitter-waterfall-axylk6j9-pooler.c-4.us-east-2.aws.neon.tech/neondb?sslmode=require"
     )
 
-    SECRET_KEY: str = "change-this-in-production"
+    SECRET_KEY: str = os.getenv(
+        "SECRET_KEY",
+        "workspace-production-secret-key"
+    )
 
-    FRONTEND_URL: str = "http://localhost:3000"
+    FRONTEND_URL: str = os.getenv(
+        "FRONTEND_URL",
+        "http://localhost:3000"
+    )
 
-    OPENAI_API_KEY: str = ""
+    OPENAI_API_KEY: str = os.getenv(
+        "OPENAI_API_KEY",
+        ""
+    )
 
     DEFAULT_MODEL: str = "gpt-4o-mini"
 
@@ -23,3 +33,5 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+
