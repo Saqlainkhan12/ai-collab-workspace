@@ -14,6 +14,7 @@ cors_origins = list(
     {
         settings.FRONTEND_URL.rstrip("/"),
         "http://localhost:3000",
+        "https://ai-collab-workspace-frontend.vercel.app",
         "http://127.0.0.1:3000",
         "http://localhost:8000",
         "http://127.0.0.1:8000",
