@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 
@@ -26,6 +26,9 @@ export default function Home() {
   const [members, setMembers] = useState([]);
 
   const [uploading, setUploading] = useState(false);
+
+  // MOBILE MENU STATE
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // CHAT STATE
   const [chatMessages, setChatMessages] = useState([]);
@@ -256,6 +259,7 @@ export default function Home() {
     setChatInput("");
     setMessage("");
     setView("chat");
+    setMobileMenuOpen(false);
   }
 
   async function openConversation(conversation) {
@@ -279,6 +283,7 @@ export default function Home() {
       setChatMessages(data.messages || []);
       setView("chat");
       setMessage("");
+      setMobileMenuOpen(false);
     } catch (error) {
       console.error(error);
       setMessage("Conversation load nahi ho saki.");
@@ -368,6 +373,7 @@ export default function Home() {
 
   function selectView(nextView) {
     setView(nextView);
+    setMobileMenuOpen(false);
 
     if (nextView === "documents") {
       loadDocuments();
@@ -400,14 +406,70 @@ export default function Home() {
 
   return (
     <main className="workspace">
-      <aside className="sidebar">
+      {/* MOBILE TOP BAR */}
+      <header className="mobile-header">
+        <button
+          type="button"
+          className="mobile-menu-btn"
+          onClick={() => setMobileMenuOpen((prev) => !prev)}
+          aria-label="Toggle navigation menu"
+        >
+          {mobileMenuOpen ? "✕" : "☰"}
+        </button>
+
+        <div
+          className="mobile-brand"
+          onClick={() => selectView("dashboard")}
+        >
+          <div className="brand-mark">✦</div>
+          <div className="mobile-brand-title">
+            <strong>COLLAB AI</strong>
+            <span>{view.toUpperCase()}</span>
+          </div>
+        </div>
+
+        {view !== "chat" ? (
+          <button
+            type="button"
+            className="mobile-action-btn"
+            onClick={() => setShowCreate(true)}
+          >
+            + New
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="mobile-action-btn"
+            onClick={() => selectView("conversations")}
+          >
+            Chats
+          </button>
+        )}
+      </header>
+
+      {/* MOBILE BACKDROP */}
+      <div
+        className={`sidebar-backdrop ${mobileMenuOpen ? "open" : ""}`}
+        onClick={() => setMobileMenuOpen(false)}
+      />
+
+      <aside className={`sidebar ${mobileMenuOpen ? "open" : ""}`}>
         <div className="brand">
           <div className="brand-mark">✦</div>
 
-          <div>
+          <div className="brand-text">
             <strong>COLLAB AI</strong>
             <span>PROJECT WORKSPACE</span>
           </div>
+
+          <button
+            type="button"
+            className="sidebar-close-btn"
+            onClick={() => setMobileMenuOpen(false)}
+            aria-label="Close Sidebar"
+          >
+            ✕
+          </button>
         </div>
 
         <nav>
