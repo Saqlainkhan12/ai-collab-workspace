@@ -12,9 +12,5 @@
     "next": "latest",
     "react": "latest",
     "react-dom": "latest"
-  },
-  "devDependencies": {
-    "eslint": "^9.0.0",
-    "eslint-config-next": "latest"
   }
 }
