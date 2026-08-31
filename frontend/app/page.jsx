@@ -62,6 +62,43 @@ export default function Home() {
   const [artifactTab, setArtifactTab] = useState("preview"); // "preview" | "code"
   const [artifactDevice, setArtifactDevice] = useState("desktop"); // "desktop" | "mobile"
 
+  // THEME COLOR SWITCHER STATE (Short Right Corner Button)
+  const [theme, setTheme] = useState("purple");
+  const [themeMenuOpen, setThemeMenuOpen] = useState(false);
+
+  const themes = [
+    { id: "purple", name: "Neon Purple", color: "#8064ff", bg: "#070a0d" },
+    { id: "green", name: "ChatGPT Emerald", color: "#10a37f", bg: "#070d0a" },
+    { id: "blue", name: "Cyber Blue", color: "#3b82f6", bg: "#070a12" },
+    { id: "amber", name: "Sunset Amber", color: "#f59e0b", bg: "#0c0906" },
+  ];
+
+  useEffect(() => {
+    try {
+      const savedTheme = localStorage.getItem("collab_theme");
+      if (savedTheme && ["purple", "green", "blue", "amber"].includes(savedTheme)) {
+        setTheme(savedTheme);
+        document.documentElement.setAttribute("data-theme", savedTheme);
+      } else {
+        document.documentElement.setAttribute("data-theme", "purple");
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
+  function changeTheme(newTheme) {
+    setTheme(newTheme);
+    try {
+      localStorage.setItem("collab_theme", newTheme);
+      document.documentElement.setAttribute("data-theme", newTheme);
+    } catch (e) {
+      console.error(e);
+    }
+    setThemeMenuOpen(false);
+    setMessage(`Theme changed to ${newTheme.toUpperCase()}!`);
+  }
+
   // COMMAND PALETTE STATE (Ctrl+K)
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [commandSearch, setCommandSearch] = useState("");
@@ -77,6 +114,7 @@ export default function Home() {
         setSelectedPaletteIndex(0);
       } else if (e.key === "Escape") {
         setCommandPaletteOpen(false);
+        setThemeMenuOpen(false);
       }
     }
 
@@ -1113,7 +1151,7 @@ export default function Home() {
   }
 
   return (
-    <main className="workspace">
+    <main className="workspace" data-theme={theme}>
       {/* MOBILE TOP BAR */}
       <header className="mobile-header">
         <button
@@ -1137,6 +1175,29 @@ export default function Home() {
         </div>
 
         <div className="mobile-header-actions">
+          {/* MOBILE SHORT THEME BUTTON */}
+          <button
+            type="button"
+            className="mobile-theme-btn"
+            onClick={() => setThemeMenuOpen((prev) => !prev)}
+            title="Theme Palette"
+            aria-label="Theme Color"
+          >
+            <span
+              className="theme-dot-indicator"
+              style={{
+                background:
+                  theme === "green"
+                    ? "#10a37f"
+                    : theme === "blue"
+                    ? "#3b82f6"
+                    : theme === "amber"
+                    ? "#f59e0b"
+                    : "#8064ff",
+              }}
+            />
+          </button>
+
           <button
             type="button"
             className="mobile-search-btn"
@@ -1311,6 +1372,63 @@ export default function Home() {
               <span className="search-text">Search anything...</span>
               <span className="search-kbd">Ctrl K</span>
             </button>
+
+            {/* SHORT RIGHT CORNER THEME COLOR SWITCHER */}
+            <div className="theme-switcher-container">
+              <button
+                type="button"
+                className="theme-pill-btn"
+                onClick={() => setThemeMenuOpen((prev) => !prev)}
+                title="Change Color Theme"
+              >
+                <span
+                  className="theme-active-dot"
+                  style={{
+                    background:
+                      theme === "green"
+                        ? "#10a37f"
+                        : theme === "blue"
+                        ? "#3b82f6"
+                        : theme === "amber"
+                        ? "#f59e0b"
+                        : "#8064ff",
+                  }}
+                />
+                <span className="theme-pill-icon">🎨</span>
+              </button>
+
+              {themeMenuOpen && (
+                <div className="theme-dropdown-menu" onClick={(e) => e.stopPropagation()}>
+                  <div className="theme-dropdown-header">
+                    <span>THEME ACCENT</span>
+                    <button
+                      type="button"
+                      className="theme-dropdown-close"
+                      onClick={() => setThemeMenuOpen(false)}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <div className="theme-options-grid">
+                    {themes.map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        className={`theme-option-btn ${theme === t.id ? "active" : ""}`}
+                        onClick={() => changeTheme(t.id)}
+                      >
+                        <span
+                          className="theme-preview-bubble"
+                          style={{ background: t.color }}
+                        />
+                        <span className="theme-option-label">{t.name}</span>
+                        {theme === t.id && <span className="theme-check-icon">✓</span>}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
 
             {view === "tasks" && project && (
               <>
@@ -1789,45 +1907,48 @@ export default function Home() {
               </div>
             )}
 
-            {/* CHAT */}
+            {/* CHAT - HUMANIZED CHATGPT EXPERIENCE */}
 
             {view === "chat" && (
-              <div className="chat-page">
-                <div className="chat-header">
-                  <div>
-                    <span className="eyebrow">
-                      AI CONVERSATION
-                    </span>
-
-                    <h2>
-                      {activeProject?.name ||
-                        "AI Workspace"}
-                    </h2>
-
-                    <p>
-                      Ask questions about your project,
-                      documents and knowledge.
-                    </p>
-                  </div>
-
-                  <div className="chat-header-actions">
+              <div className="chat-page humanized-chat-view">
+                {/* CHAT TOPBAR / CONTEXT HEADER */}
+                <div className="chat-header-human">
+                  <div className="chat-context-info">
                     <button
                       type="button"
-                      className="export-chat-btn"
+                      className="chat-back-link"
+                      onClick={() => setView("conversations")}
+                      title="Back to Conversations"
+                    >
+                      ← Back
+                    </button>
+                    <div className="chat-header-model-pill">
+                      <span className="live-status-dot" />
+                      <strong className="chat-project-title">
+                        {activeProject?.name || "AI Workspace"}
+                      </strong>
+                      <span className="chat-model-badge">GPT-4o Mini</span>
+                    </div>
+                  </div>
+
+                  <div className="chat-header-actions-human">
+                    <button
+                      type="button"
+                      className="chat-tool-btn"
                       onClick={exportChatMarkdown}
                       disabled={chatMessages.length === 0}
-                      title="Export chat transcript as Markdown"
+                      title="Export chat transcript as Markdown (.md)"
                     >
-                      📥 Export (.md)
+                      📥 Export
                     </button>
 
                     <button
                       type="button"
-                      className="canvas-toggle-header-btn"
+                      className="chat-tool-btn canvas-btn"
                       onClick={() => {
                         if (!activeArtifact) {
                           openArtifact(
-                            `<h1>✦ Interactive Artifact Canvas</h1>\n<p>Ask AI to generate HTML, CSS, SVG or React components to interact with them live!</p>\n<button style="padding:10px 18px;background:#8064ff;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;" onclick="alert('Artifact Sandbox Working!')">Click Interactive Demo</button>`,
+                            `<h1>✦ Interactive Artifact Canvas</h1>\n<p>Ask AI to generate HTML, CSS, SVG or React components to interact with them live!</p>\n<button style="padding:10px 18px;background:var(--primary);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;" onclick="alert('Artifact Sandbox Working!')">Click Interactive Demo</button>`,
                             "html",
                             "Interactive Sandbox"
                           );
@@ -1841,162 +1962,197 @@ export default function Home() {
                     </button>
 
                     <button
-                      className="secondary"
-                      onClick={() =>
-                        setView("conversations")
-                      }
-                    >
-                      ← CONVERSATIONS
-                    </button>
-
-                    <button
-                      className="create-btn"
+                      type="button"
+                      className="create-btn new-chat-btn"
                       onClick={startNewConversation}
+                      title="Start fresh conversation"
                     >
-                      + NEW CHAT
+                      + New Chat
                     </button>
                   </div>
                 </div>
 
-                <div className="chat-window">
-                  {chatMessages.length === 0 ? (
-                    <div className="chat-empty">
-                      <div className="chat-empty-icon">
-                        ✦
+                {/* MESSAGES CONTAINER */}
+                <div className="chat-window-human">
+                  <div className="chat-stream-center">
+                    {chatMessages.length === 0 ? (
+                      <div className="chat-empty-human">
+                        <div className="chat-welcome-avatar">✦</div>
+
+                        <h2>What would you like to build or explore?</h2>
+
+                        <p className="chat-welcome-sub">
+                          Ask anything about <strong>{activeProject?.name}</strong>, query uploaded documents & URLs, or generate interactive UI components.
+                        </p>
+
+                        <div className="human-prompts-grid">
+                          <button
+                            type="button"
+                            className="human-prompt-card"
+                            onClick={() =>
+                              setChatInput("Give me a comprehensive overview and executive summary of this project.")
+                            }
+                          >
+                            <span className="prompt-card-icon">📄</span>
+                            <div className="prompt-card-texts">
+                              <strong>Summarize Project</strong>
+                              <span>Get key goals & current status</span>
+                            </div>
+                          </button>
+
+                          <button
+                            type="button"
+                            className="human-prompt-card"
+                            onClick={() =>
+                              setChatInput("Generate an interactive HTML dashboard widget with glowing statistics.")
+                            }
+                          >
+                            <span className="prompt-card-icon">⚡</span>
+                            <div className="prompt-card-texts">
+                              <strong>Generate UI Component</strong>
+                              <span>Run in live interactive canvas</span>
+                            </div>
+                          </button>
+
+                          <button
+                            type="button"
+                            className="human-prompt-card"
+                            onClick={() =>
+                              setChatInput("What are the key action items and next steps we should take on this project?")
+                            }
+                          >
+                            <span className="prompt-card-icon">📋</span>
+                            <div className="prompt-card-texts">
+                              <strong>Action Items & Tasks</strong>
+                              <span>Extract next steps from chat</span>
+                            </div>
+                          </button>
+
+                          <button
+                            type="button"
+                            className="human-prompt-card"
+                            onClick={() =>
+                              setChatInput("Analyze the uploaded documents and explain key takeaways.")
+                            }
+                          >
+                            <span className="prompt-card-icon">🔍</span>
+                            <div className="prompt-card-texts">
+                              <strong>Analyze Knowledge</strong>
+                              <span>Query project files & web URLs</span>
+                            </div>
+                          </button>
+                        </div>
                       </div>
+                    ) : (
+                      <div className="human-messages-stack">
+                        {chatMessages.map((item) => (
+                          <div
+                            key={item.id}
+                            className={`human-msg-wrapper ${
+                              item.role === "user" ? "user-side" : "assistant-side"
+                            }`}
+                          >
+                            {item.role === "user" ? (
+                              <div className="human-user-bubble">
+                                <div className="human-user-text">
+                                  {item.content}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="human-assistant-card">
+                                <div className="human-assistant-header">
+                                  <div className="human-assistant-avatar">✦</div>
+                                  <span className="human-assistant-name">COLLAB AI</span>
+                                  <span className="human-verified-tag">Assistant</span>
+                                </div>
 
-                      <h2>
-                        Start a conversation
-                      </h2>
-
-                      <p>
-                        Ask anything about{" "}
-                        <strong>
-                          {activeProject?.name}
-                        </strong>
-                        .
-                      </p>
-
-                      <div className="suggestions">
-                        <button
-                          onClick={() =>
-                            setChatInput(
-                              "Give me a summary of this project."
-                            )
-                          }
-                        >
-                          Summarize this project
-                        </button>
-
-                        <button
-                          onClick={() =>
-                            setChatInput(
-                              "Generate an interactive HTML pricing card component with glowing styles."
-                            )
-                          }
-                        >
-                          ⚡ Generate UI Artifact
-                        </button>
-
-                        <button
-                          onClick={() =>
-                            setChatInput(
-                              "Analyze the project knowledge."
-                            )
-                          }
-                        >
-                          Analyze project knowledge
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="messages">
-                      {chatMessages.map((item) => (
-                        <div
-                          key={item.id}
-                          className={`message-row ${
-                            item.role === "user"
-                              ? "user"
-                              : "assistant"
-                          }`}
-                        >
-                          <div className="message-avatar">
-                            {item.role === "user"
-                              ? "S"
-                              : "✦"}
+                                <div className="human-assistant-body">
+                                  {renderFormattedContent(item.content)}
+                                </div>
+                              </div>
+                            )}
                           </div>
+                        ))}
 
-                          <div className="message-bubble">
-                            <span className="message-role">
-                              {item.role === "user"
-                                ? "You"
-                                : "COLLAB AI"}
-                            </span>
+                        {chatLoading && (
+                          <div className="human-msg-wrapper assistant-side">
+                            <div className="human-assistant-card">
+                              <div className="human-assistant-header">
+                                <div className="human-assistant-avatar pulsing">✦</div>
+                                <span className="human-assistant-name">COLLAB AI</span>
+                                <span className="human-thinking-tag">Thinking...</span>
+                              </div>
 
-                            <div className="message-content">
-                              {renderFormattedContent(item.content)}
+                              <div className="human-typing-wave">
+                                <span className="wave-dot" />
+                                <span className="wave-dot" />
+                                <span className="wave-dot" />
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
-
-                      {chatLoading && (
-                        <div className="message-row assistant">
-                          <div className="message-avatar">
-                            ✦
-                          </div>
-
-                          <div className="message-bubble">
-                            <span className="message-role">
-                              COLLAB AI
-                            </span>
-
-                            <div className="typing">
-                              AI is thinking...
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                <form
-                  className="chat-input-area"
-                  onSubmit={sendMessage}
-                >
-                  <textarea
-                    value={chatInput}
-                    onChange={(event) =>
-                      setChatInput(event.target.value)
-                    }
-                    onKeyDown={(event) => {
-                      if (
-                        event.key === "Enter" &&
-                        !event.shiftKey
-                      ) {
-                        event.preventDefault();
-                        sendMessage(event);
-                      }
-                    }}
-                    placeholder="Message your AI workspace..."
-                    rows={3}
-                    disabled={chatLoading}
-                  />
+                {/* FLOATING CHATGPT-STYLE INPUT DOCK */}
+                <div className="chat-input-dock-human">
+                  <div className="chat-dock-center">
+                    <form
+                      className="chat-human-form"
+                      onSubmit={sendMessage}
+                    >
+                      <textarea
+                        value={chatInput}
+                        onChange={(event) =>
+                          setChatInput(event.target.value)
+                        }
+                        onKeyDown={(event) => {
+                          if (
+                            event.key === "Enter" &&
+                            !event.shiftKey
+                          ) {
+                            event.preventDefault();
+                            sendMessage(event);
+                          }
+                        }}
+                        placeholder={`Message ${activeProject?.name || "Collab AI"}...`}
+                        rows={2}
+                        disabled={chatLoading}
+                        className="chat-human-input"
+                      />
 
-                  <button
-                    type="submit"
-                    className="create-btn send-btn"
-                    disabled={
-                      chatLoading ||
-                      !chatInput.trim()
-                    }
-                  >
-                    {chatLoading
-                      ? "THINKING..."
-                      : "SEND →"}
-                  </button>
-                </form>
+                      <div className="chat-form-action-row">
+                        <div className="chat-form-badges">
+                          <span className="knowledge-indicator-pill" title="Project Knowledge Base">
+                            📁 {documents.length} sources indexed
+                          </span>
+                        </div>
+
+                        <button
+                          type="submit"
+                          className="chat-human-send-circle"
+                          disabled={
+                            chatLoading ||
+                            !chatInput.trim()
+                          }
+                          title="Send message (Enter)"
+                        >
+                          {chatLoading ? (
+                            <span className="send-spinner-icon" />
+                          ) : (
+                            <span className="send-arrow-symbol">↑</span>
+                          )}
+                        </button>
+                      </div>
+                    </form>
+
+                    <div className="chat-footer-note">
+                      <span>Collab AI can make mistakes. Verify important project details.</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
