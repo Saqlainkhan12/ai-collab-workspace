@@ -1,13 +1,63 @@
 import { NextResponse } from "next/server";
 import { getSql, ensureDbInitialized } from "@/lib/db";
 
+async function searchWeb(query) {
+  try {
+    const searchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
+    const res = await fetch(searchUrl, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      },
+    });
+
+    if (!res.ok) return [];
+    const html = await res.text();
+    const results = [];
+
+    const titleRegex = /<h2 class="result__title">[\s\S]*?<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi;
+    const snippetRegex = /<a class="result__snippet[^>]*>([\s\S]*?)<\/a>/gi;
+
+    const titlesAndUrls = [];
+    let match;
+    while ((match = titleRegex.exec(html)) !== null && titlesAndUrls.length < 5) {
+      let rawUrl = match[1] || "";
+      let title = match[2]?.replace(/<[^>]+>/g, "").trim() || "";
+      if (rawUrl.includes("uddg=")) {
+        rawUrl = decodeURIComponent(rawUrl.split("uddg=")[1]?.split("&")[0] || "");
+      }
+      if (title && rawUrl && rawUrl.startsWith("http")) {
+        titlesAndUrls.push({ title, url: rawUrl });
+      }
+    }
+
+    const snippets = [];
+    while ((match = snippetRegex.exec(html)) !== null && snippets.length < 5) {
+      snippets.push(match[1]?.replace(/<[^>]+>/g, "").trim() || "");
+    }
+
+    for (let i = 0; i < Math.min(titlesAndUrls.length, 4); i++) {
+      results.push({
+        title: titlesAndUrls[i].title,
+        url: titlesAndUrls[i].url,
+        snippet: snippets[i] || "Live search result",
+      });
+    }
+
+    return results;
+  } catch (err) {
+    console.error("Live Web Search Error:", err);
+    return [];
+  }
+}
+
 export async function POST(request, { params }) {
   try {
     await ensureDbInitialized();
     const sql = getSql();
     const projectId = parseInt(params.id, 10);
     const body = await request.json();
-    const { message, session_id, title } = body;
+    const { message, session_id, title, web_search } = body;
 
     if (!message || !message.trim()) {
       return NextResponse.json({ detail: "Message is required" }, { status: 400 });
@@ -53,12 +103,32 @@ export async function POST(request, { params }) {
     `;
     const contextText = docs.map((d) => d.content).join("\n\n");
 
+    // Optional Live Web Search (Perplexity Mode)
+    let webSources = [];
+    let webContext = "";
+    if (web_search) {
+      webSources = await searchWeb(message.trim());
+      if (webSources.length > 0) {
+        webContext = `\n\n--- REAL-TIME LIVE WEB SEARCH RESULTS ---\n` +
+          webSources
+            .map((s, idx) => `[${idx + 1}] Title: ${s.title}\nURL: ${s.url}\nSnippet: ${s.snippet}`)
+            .join("\n\n") +
+          `\n\nPlease cite sources using [1], [2], etc., where applicable.`;
+      }
+    }
+
     // Call OpenAI or intelligent fallback
     let aiReply = "";
     const apiKey = process.env.OPENAI_API_KEY;
 
     if (apiKey) {
       try {
+        const systemPrompt = `You are the AI Assistant for the workspace project "${project.name || "Collab AI"}".
+Project Description: ${project.description || "N/A"}
+Project Knowledge / Context:
+${contextText || "No workspace documents uploaded yet."}
+${webContext}`;
+
         const response = await fetch("https://api.openai.com/v1/chat/completions", {
           method: "POST",
           headers: {
@@ -68,10 +138,7 @@ export async function POST(request, { params }) {
           body: JSON.stringify({
             model: "gpt-4o-mini",
             messages: [
-              {
-                role: "system",
-                content: `You are the AI Assistant for the workspace project "${project.name || "Collab AI"}".\nProject Description: ${project.description || "N/A"}\nProject Knowledge / Context:\n${contextText || "No documents uploaded yet."}`,
-              },
+              { role: "system", content: systemPrompt },
               { role: "user", content: message },
             ],
             temperature: 0.7,
@@ -88,7 +155,12 @@ export async function POST(request, { params }) {
     }
 
     if (!aiReply) {
-      aiReply = `Hello! I am your AI assistant for "${project.name || "this project"}".\n\nI have received your query: "${message}".\n\n${docs.length > 0 ? "I reviewed your project documents and knowledge base to assist you." : "Upload documents to this workspace to give me more specific knowledge!"}`;
+      if (webSources.length > 0) {
+        aiReply = `### 🌐 Live Web Search Results for: "${message}"\n\nBased on live web search, here is the information:\n\n` +
+          webSources.map((s, i) => `**[${i + 1}] ${s.title}**\n${s.snippet}\n🔗 [Visit Source](${s.url})`).join("\n\n");
+      } else {
+        aiReply = `Hello! I am your AI assistant for "${project.name || "this project"}".\n\nI have received your query: "${message}".\n\n${docs.length > 0 ? "I reviewed your project documents and knowledge base to assist you." : "Upload documents to this workspace or turn on 🌐 Live Web Search for real-time answers!"}`;
+      }
     }
 
     // Save assistant message
@@ -108,6 +180,7 @@ export async function POST(request, { params }) {
       answer: aiReply,
       model: "gpt-4o-mini",
       sources: docs.map((d, i) => ({ id: i + 1, content: d.content?.substring(0, 100) })),
+      web_sources: webSources,
     });
   } catch (error) {
     console.error("Chat error:", error);

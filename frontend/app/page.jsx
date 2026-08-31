@@ -65,6 +65,11 @@ export default function Home() {
   // THEME COLOR SWITCHER STATE (Direct 1-Click Color Bar)
   const [theme, setTheme] = useState("obsidian");
 
+  // VOICE AI & LIVE WEB SEARCH STATES (Features 1 & 2)
+  const [isListening, setIsListening] = useState(false);
+  const [activeSpeakingId, setActiveSpeakingId] = useState(null);
+  const [webSearchEnabled, setWebSearchEnabled] = useState(false);
+
   const themes = [
     { id: "obsidian", name: "Obsidian Slate", color: "#58a6ff", desc: "Clean Modern Dark" },
     { id: "ocean", name: "Ocean Deep", color: "#38bdf8", desc: "Sapphire Blue" },
@@ -591,6 +596,87 @@ export default function Home() {
     }
   }
 
+  // SPEECH RECOGNITION (Voice Dictation / Speech-to-Text)
+  function toggleVoiceInput() {
+    if (isListening) {
+      if (typeof window !== "undefined" && window._speechRec) {
+        window._speechRec.stop();
+      }
+      setIsListening(false);
+      return;
+    }
+
+    if (typeof window === "undefined") return;
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      alert("Aapka browser Speech Recognition support nahi karta. Google Chrome ya Edge use karein.");
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.lang = "en-US";
+
+      recognition.onstart = () => {
+        setIsListening(true);
+        setMessage("🎙️ Listening... Bolna shuru karein.");
+      };
+
+      recognition.onresult = (event) => {
+        let transcript = "";
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript;
+        }
+        setChatInput((prev) => (prev ? prev + " " + transcript : transcript));
+      };
+
+      recognition.onerror = (e) => {
+        console.error("Speech Recognition Error:", e);
+        setIsListening(false);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      window._speechRec = recognition;
+      recognition.start();
+    } catch (err) {
+      console.error(err);
+      setIsListening(false);
+    }
+  }
+
+  // TEXT TO SPEECH (AI Voice Audio Output)
+  function speakMessage(msgId, text) {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+
+    if (activeSpeakingId === msgId) {
+      window.speechSynthesis.cancel();
+      setActiveSpeakingId(null);
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const cleanText = (text || "")
+      .replace(/```[\s\S]*?```/g, "Code block omitted.")
+      .replace(/[#*`_~]/g, "")
+      .replace(/\[\d+\]/g, "");
+
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+
+    utterance.onstart = () => setActiveSpeakingId(msgId);
+    utterance.onend = () => setActiveSpeakingId(null);
+    utterance.onerror = () => setActiveSpeakingId(null);
+
+    window.speechSynthesis.speak(utterance);
+  }
+
   async function sendMessage(event) {
     event?.preventDefault();
 
@@ -602,6 +688,12 @@ export default function Home() {
     const text = chatInput.trim();
 
     if (!text || chatLoading) return;
+
+    // Stop voice dictation if listening
+    if (isListening && window._speechRec) {
+      window._speechRec.stop();
+      setIsListening(false);
+    }
 
     const temporaryMessage = {
       id: `temp-${Date.now()}`,
@@ -628,6 +720,7 @@ export default function Home() {
             message: text,
             session_id: activeConversation?.session_id || null,
             title: activeConversation?.title || null,
+            web_search: webSearchEnabled,
           }),
         }
       );
@@ -651,6 +744,7 @@ export default function Home() {
           role: "assistant",
           content: data.answer,
           model_used: data.model,
+          web_sources: data.web_sources || [],
         },
       ]);
 
@@ -2088,10 +2182,51 @@ export default function Home() {
                                   <div className="human-assistant-avatar">✦</div>
                                   <span className="human-assistant-name">COLLAB AI</span>
                                   <span className="human-verified-tag">Assistant</span>
+
+                                  {/* VOICE AUDIO SPEAKER BUTTON */}
+                                  <button
+                                    type="button"
+                                    className={`tts-speaker-btn ${
+                                      activeSpeakingId === item.id ? "speaking" : ""
+                                    }`}
+                                    onClick={() => speakMessage(item.id, item.content)}
+                                    title={
+                                      activeSpeakingId === item.id
+                                        ? "Stop voice audio"
+                                        : "Listen to AI voice reply"
+                                    }
+                                  >
+                                    {activeSpeakingId === item.id ? "⏹️ Stop" : "🔊 Listen"}
+                                  </button>
                                 </div>
 
                                 <div className="human-assistant-body">
                                   {renderFormattedContent(item.content)}
+
+                                  {/* REAL-TIME LIVE WEB CITATIONS */}
+                                  {item.web_sources && item.web_sources.length > 0 && (
+                                    <div className="web-citations-container">
+                                      <div className="web-citations-head">
+                                        <span>🌐 Real-Time Web Sources ({item.web_sources.length}):</span>
+                                      </div>
+                                      <div className="web-citations-grid">
+                                        {item.web_sources.map((src, sIdx) => (
+                                          <a
+                                            key={sIdx}
+                                            href={src.url}
+                                            target="_blank"
+                                            rel="noreferrer noopener"
+                                            className="citation-card-link"
+                                            title={src.snippet}
+                                          >
+                                            <span className="citation-num">[{sIdx + 1}]</span>
+                                            <span className="citation-title">{src.title}</span>
+                                            <span className="citation-arrow">↗</span>
+                                          </a>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             )}
@@ -2104,7 +2239,9 @@ export default function Home() {
                               <div className="human-assistant-header">
                                 <div className="human-assistant-avatar pulsing">✦</div>
                                 <span className="human-assistant-name">COLLAB AI</span>
-                                <span className="human-thinking-tag">Thinking...</span>
+                                <span className="human-thinking-tag">
+                                  {webSearchEnabled ? "Searching web & generating answer..." : "Thinking..."}
+                                </span>
                               </div>
 
                               <div className="human-typing-wave">
@@ -2141,17 +2278,47 @@ export default function Home() {
                             sendMessage(event);
                           }
                         }}
-                        placeholder={`Message ${activeProject?.name || "Collab AI"}...`}
+                        placeholder={
+                          isListening
+                            ? "🎙️ Listening... speak now into your microphone"
+                            : `Message ${activeProject?.name || "Collab AI"}...`
+                        }
                         rows={2}
                         disabled={chatLoading}
-                        className="chat-human-input"
+                        className={`chat-human-input ${isListening ? "mic-active" : ""}`}
                       />
 
                       <div className="chat-form-action-row">
                         <div className="chat-form-badges">
                           <span className="knowledge-indicator-pill" title="Project Knowledge Base">
-                            📁 {documents.length} sources indexed
+                            📁 {documents.length} sources
                           </span>
+
+                          {/* LIVE WEB SEARCH TOGGLE (PERPLEXITY MODE) */}
+                          <button
+                            type="button"
+                            className={`web-search-toggle-btn ${
+                              webSearchEnabled ? "active" : ""
+                            }`}
+                            onClick={() => setWebSearchEnabled((prev) => !prev)}
+                            title="Toggle Real-Time Web Search (Perplexity Mode)"
+                          >
+                            🌐 {webSearchEnabled ? "Web Search: ON" : "Web Search: OFF"}
+                          </button>
+
+                          {/* VOICE SPEECH-TO-TEXT MIC BUTTON */}
+                          <button
+                            type="button"
+                            className={`voice-mic-btn ${isListening ? "listening" : ""}`}
+                            onClick={toggleVoiceInput}
+                            title={
+                              isListening
+                                ? "Listening... click to stop"
+                                : "Click to speak (Voice Dictation)"
+                            }
+                          >
+                            🎙️ {isListening ? "Listening..." : "Voice"}
+                          </button>
                         </div>
 
                         <button
@@ -2173,7 +2340,7 @@ export default function Home() {
                     </form>
 
                     <div className="chat-footer-note">
-                      <span>Collab AI can make mistakes. Verify important project details.</span>
+                      Collab AI uses RAG knowledge base, live web search & voice tools for verified insights.
                     </div>
                   </div>
                 </div>
