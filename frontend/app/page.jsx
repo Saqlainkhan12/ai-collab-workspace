@@ -63,24 +63,26 @@ export default function Home() {
   const [artifactDevice, setArtifactDevice] = useState("desktop"); // "desktop" | "mobile"
 
   // THEME COLOR SWITCHER STATE (Direct 1-Click Color Bar)
-  const [theme, setTheme] = useState("green");
+  const [theme, setTheme] = useState("obsidian");
 
   const themes = [
-    { id: "green", name: "ChatGPT Mint", color: "#10a37f", desc: "OpenAI Emerald" },
-    { id: "blue", name: "Linear Blue", color: "#3b82f6", desc: "Cyber Electric" },
-    { id: "purple", name: "Obsidian Violet", color: "#8b5cf6", desc: "Deep Luxe" },
-    { id: "titanium", name: "Titanium Slate", color: "#e2e8f0", desc: "Clean Minimalist" },
+    { id: "obsidian", name: "Obsidian Slate", color: "#58a6ff", desc: "Clean Modern Dark" },
+    { id: "ocean", name: "Ocean Deep", color: "#38bdf8", desc: "Sapphire Blue" },
+    { id: "purple", name: "Velvet Purple", color: "#a855f7", desc: "Cosmic Violet" },
+    { id: "light", name: "Titanium Light", color: "#2563eb", desc: "Crisp Clean White" },
   ];
 
   useEffect(() => {
     try {
       const savedTheme = localStorage.getItem("collab_theme");
-      if (savedTheme && ["green", "blue", "purple", "titanium"].includes(savedTheme)) {
+      if (savedTheme && ["obsidian", "ocean", "purple", "light"].includes(savedTheme)) {
         setTheme(savedTheme);
         document.documentElement.setAttribute("data-theme", savedTheme);
+        document.body.setAttribute("data-theme", savedTheme);
       } else {
-        setTheme("green");
-        document.documentElement.setAttribute("data-theme", "green");
+        setTheme("obsidian");
+        document.documentElement.setAttribute("data-theme", "obsidian");
+        document.body.setAttribute("data-theme", "obsidian");
       }
     } catch (e) {
       console.error(e);
@@ -99,11 +101,12 @@ export default function Home() {
     try {
       localStorage.setItem("collab_theme", newTheme);
       document.documentElement.setAttribute("data-theme", newTheme);
+      document.body.setAttribute("data-theme", newTheme);
     } catch (e) {
       console.error(e);
     }
     const tObj = themes.find((t) => t.id === newTheme);
-    setMessage(`Theme changed: ${tObj?.name || newTheme}`);
+    setMessage(`Theme switched: ${tObj?.name || newTheme}`);
   }
 
   // COMMAND PALETTE STATE (Ctrl+K)
