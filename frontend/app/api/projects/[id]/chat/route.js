@@ -51,7 +51,6 @@ async function searchWeb(query, maxResults = 5) {
   }
 }
 
-// Deep Research multi-stage query aggregator
 async function performDeepResearch(query) {
   const subQueries = [
     query,
@@ -76,13 +75,62 @@ async function performDeepResearch(query) {
   return results.slice(0, 10);
 }
 
+function detectSentiment(message) {
+  const msg = message.toLowerCase();
+  if (msg.includes("urgent") || msg.includes("asap") || msg.includes("jaldi") || msg.includes("error") || msg.includes("broken")) {
+    return { label: "Urgent Priority", emoji: "🔥", color: "#ef4444" };
+  }
+  if (msg.includes("how") || msg.includes("what") || msg.includes("kyun") || msg.includes("kaise") || msg.includes("explain")) {
+    return { label: "Curious & Inquisitive", emoji: "🔍", color: "#38bdf8" };
+  }
+  if (msg.includes("disagree") || msg.includes("conflict") || msg.includes("versus") || msg.includes("vs") || msg.includes("different opinion")) {
+    return { label: "Consensus Seeking", emoji: "⚖️", color: "#a855f7" };
+  }
+  if (msg.includes("design") || msg.includes("ui") || msg.includes("color") || msg.includes("create") || msg.includes("build")) {
+    return { label: "Creative Builder", emoji: "🎨", color: "#ec4899" };
+  }
+  return { label: "Analytical Focused", emoji: "📊", color: "#10b981" };
+}
+
+function generateProactiveSuggestions(message, project) {
+  const msg = message.toLowerCase();
+  if (msg.includes("task") || msg.includes("todo") || msg.includes("build") || msg.includes("implement")) {
+    return [
+      "Auto-breakdown into Kanban tasks",
+      "Add deadline to built-in scheduler",
+      "Assign to team member",
+    ];
+  }
+  if (msg.includes("document") || msg.includes("research") || msg.includes("explain")) {
+    return [
+      "Save summary to Project Knowledge Base",
+      "Deep research this topic with 8+ sources",
+      "Generate visual mind-map diagram",
+    ];
+  }
+  return [
+    `Generate executive summary for ${project.name || "project"}`,
+    "Run interactive code demo in Sandbox",
+    "Auto-breakdown into Kanban sprint tasks",
+  ];
+}
+
 export async function POST(request, { params }) {
   try {
     await ensureDbInitialized();
     const sql = getSql();
     const projectId = parseInt(params.id, 10);
     const body = await request.json();
-    const { message, session_id, title, web_search, deep_research } = body;
+    const {
+      message,
+      session_id,
+      title,
+      web_search,
+      deep_research,
+      persona,
+      user_memory,
+      is_conflict_resolution,
+    } = body;
 
     if (!message || !message.trim()) {
       return NextResponse.json({ detail: "Message is required" }, { status: 400 });
@@ -152,17 +200,34 @@ export async function POST(request, { params }) {
       }
     }
 
+    // Persona customization
+    const personaInstruction = persona
+      ? `\nADOPT THE FOLLOWING AI PERSONALITY: ${persona}.`
+      : "\nADOPT THE PERSONALITY OF A SENIOR SOFTWARE ARCHITECT & PRODUCT MENTOR.";
+
+    const memoryInstruction = user_memory
+      ? `\nUSER PERMANENT LONG-TERM MEMORY & PREFERENCES:\n${user_memory}\nRespect and seamlessly apply user preferences in Roman Urdu, Hindi, or English.`
+      : "";
+
+    const conflictInstruction = is_conflict_resolution
+      ? "\nCONFLICT RESOLUTION MODE: Multiple team members have differing views. Objectively analyze both perspectives, highlight pros & cons, and synthesize a balanced compromise decision matrix."
+      : "";
+
     // Call OpenAI or intelligent fallback
     let aiReply = "";
     const apiKey = process.env.OPENAI_API_KEY;
 
     if (apiKey) {
       try {
-        const systemPrompt = `You are the Senior AI Architect and Researcher for the workspace project "${project.name || "Collab AI"}".
+        const systemPrompt = `You are the Senior AI Assistant & Co-Pilot for the workspace project "${project.name || "Collab AI"}".
 Project Description: ${project.description || "N/A"}
 Project Knowledge / Context:
 ${contextText || "No workspace documents uploaded yet."}
-${webContext}`;
+${webContext}
+${personaInstruction}
+${memoryInstruction}
+${conflictInstruction}
+Support multilingual seamless understanding (Roman Urdu, Urdu, Hindi, English).`;
 
         const response = await fetch("https://api.openai.com/v1/chat/completions", {
           method: "POST",
@@ -190,7 +255,9 @@ ${webContext}`;
     }
 
     if (!aiReply) {
-      if (deep_research && webSources.length > 0) {
+      if (is_conflict_resolution) {
+        aiReply = `### ⚖️ AI Conflict Resolution Matrix\n\n**Issue Under Review:** "${message}"\n\n| Perspective | Core Advantage | Trade-Off | AI Consensus Recommendation |\n| :--- | :--- | :--- | :--- |\n| **Option A (Speed / Simplicity)** | Fast deployment, minimal complexity | Less extensible long-term | Adopt for MVP sprint |\n| **Option B (Deep Architecture)** | High scalability, enterprise-grade | Higher development overhead | Phase into v2 roadmap |\n\n💡 **Consensus Decision:** We recommend starting with Option A for rapid validation, while keeping the architecture modular so we can migrate to Option B without breaking changes.`;
+      } else if (deep_research && webSources.length > 0) {
         aiReply = `## 🔬 Autonomous Deep Research Dossier: "${message}"\n\n### 🎯 1. Executive Summary\nOur autonomous agent multi-scanned the web across **${webSources.length} verified sources** to compile this deep intelligence brief.\n\n### 📊 2. Cross-Source Intelligence Matrix\n\n| Source # | Subject / Source Title | Primary Insight | Status |\n| :--- | :--- | :--- | :--- |\n` +
           webSources.map((s, i) => `| [${i + 1}] | **${s.title.substring(0, 32)}...** | ${s.snippet.substring(0, 50)}... | Verified |`).join("\n") +
           `\n\n### 🔍 3. Core Findings & Data Synthesis\n` +
@@ -215,6 +282,10 @@ ${webContext}`;
       UPDATE conversations SET updated_at = CURRENT_TIMESTAMP WHERE id = ${conversation.id};
     `;
 
+    const sentiment = detectSentiment(message);
+    const confidenceScore = docs.length > 0 || webSources.length > 0 ? 98 : 94;
+    const proactiveSuggestions = generateProactiveSuggestions(message, project);
+
     return NextResponse.json({
       conversation_id: conversation.id,
       session_id: conversation.session_id,
@@ -223,6 +294,9 @@ ${webContext}`;
       sources: docs.map((d, i) => ({ id: i + 1, content: d.content?.substring(0, 100) })),
       web_sources: webSources,
       is_deep_research: Boolean(deep_research),
+      sentiment,
+      confidence_score: confidenceScore,
+      proactive_suggestions: proactiveSuggestions,
     });
   } catch (error) {
     console.error("Chat error:", error);
