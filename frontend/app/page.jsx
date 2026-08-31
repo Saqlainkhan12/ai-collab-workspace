@@ -56,6 +56,12 @@ export default function Home() {
   const [chatLoading, setChatLoading] = useState(false);
   const [activeConversation, setActiveConversation] = useState(null);
 
+  // ARTIFACTS / LIVE CANVAS STATE (Feature 4)
+  const [activeArtifact, setActiveArtifact] = useState(null);
+  const [showCanvas, setShowCanvas] = useState(false);
+  const [artifactTab, setArtifactTab] = useState("preview"); // "preview" | "code"
+  const [artifactDevice, setArtifactDevice] = useState("desktop"); // "desktop" | "mobile"
+
   // COMMAND PALETTE STATE (Ctrl+K)
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [commandSearch, setCommandSearch] = useState("");
@@ -891,6 +897,157 @@ export default function Home() {
     ...memberItems,
   ];
 
+  // =========================
+  // ARTIFACTS & CHAT HELPERS
+  // =========================
+
+  function openArtifact(code, language = "html", title = "Interactive Artifact") {
+    let cleanCode = code;
+    if (language.toLowerCase() === "html" || !code.includes("<!DOCTYPE html>")) {
+      cleanCode = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: #0d1217;
+      color: #f0f4f8;
+      min-height: 100vh;
+    }
+  </style>
+</head>
+<body>
+  ${code}
+</body>
+</html>`;
+    }
+    setActiveArtifact({
+      title,
+      language,
+      code: cleanCode,
+      rawCode: code,
+    });
+    setShowCanvas(true);
+    setArtifactTab("preview");
+  }
+
+  function exportChatMarkdown() {
+    if (chatMessages.length === 0) return;
+    const title = activeConversation?.title || `${activeProject?.name || "Workspace"} Chat`;
+    let md = `# ${title}\n**Project:** ${activeProject?.name || "N/A"}\n**Export Date:** ${new Date().toLocaleString()}\n\n---\n\n`;
+    chatMessages.forEach((m) => {
+      const speaker = m.role === "user" ? "### 👤 You" : "### ✦ COLLAB AI";
+      md += `${speaker}\n${m.content}\n\n`;
+    });
+
+    const blob = new Blob([md], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-transcript.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setMessage("Chat transcript download ho gaya!");
+  }
+
+  function renderFormattedContent(text) {
+    if (!text) return null;
+    const codeBlockRegex = /```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g;
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = codeBlockRegex.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push({
+          type: "text",
+          content: text.substring(lastIndex, match.index),
+        });
+      }
+      parts.push({
+        type: "code",
+        language: match[1] || "code",
+        code: match[2].trim(),
+      });
+      lastIndex = match.index + match[0].length;
+    }
+
+    if (lastIndex < text.length) {
+      parts.push({
+        type: "text",
+        content: text.substring(lastIndex),
+      });
+    }
+
+    if (parts.length === 0) {
+      return <div>{text}</div>;
+    }
+
+    return (
+      <div className="formatted-message-body">
+        {parts.map((p, idx) => {
+          if (p.type === "text") {
+            return (
+              <div key={idx} className="msg-text-segment">
+                {p.content.split("\n").map((line, lIdx) => (
+                  <p key={lIdx}>{line}</p>
+                ))}
+              </div>
+            );
+          } else {
+            const isRunnable = ["html", "svg", "jsx", "javascript", "js", "css"].includes(
+              p.language.toLowerCase()
+            );
+            return (
+              <div key={idx} className="code-artifact-block">
+                <div className="code-block-header">
+                  <span className="code-lang-tag">
+                    {p.language.toUpperCase() || "CODE"}
+                  </span>
+                  <div className="code-block-actions">
+                    {isRunnable && (
+                      <button
+                        type="button"
+                        className="canvas-run-btn"
+                        onClick={() =>
+                          openArtifact(
+                            p.code,
+                            p.language,
+                            `${p.language.toUpperCase()} Artifact`
+                          )
+                        }
+                      >
+                        ▶ Run in Live Canvas
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="copy-code-btn"
+                      onClick={() => {
+                        navigator.clipboard.writeText(p.code);
+                        setMessage("Code copied to clipboard!");
+                      }}
+                    >
+                      📋 Copy
+                    </button>
+                  </div>
+                </div>
+                <pre className="code-pre">
+                  <code>{p.code}</code>
+                </pre>
+              </div>
+            );
+          }
+        })}
+      </div>
+    );
+  }
+
   function renderTaskCard(task) {
     return (
       <div className="kanban-task-card" key={task.id}>
@@ -1655,6 +1812,35 @@ export default function Home() {
 
                   <div className="chat-header-actions">
                     <button
+                      type="button"
+                      className="export-chat-btn"
+                      onClick={exportChatMarkdown}
+                      disabled={chatMessages.length === 0}
+                      title="Export chat transcript as Markdown"
+                    >
+                      📥 Export (.md)
+                    </button>
+
+                    <button
+                      type="button"
+                      className="canvas-toggle-header-btn"
+                      onClick={() => {
+                        if (!activeArtifact) {
+                          openArtifact(
+                            `<h1>✦ Interactive Artifact Canvas</h1>\n<p>Ask AI to generate HTML, CSS, SVG or React components to interact with them live!</p>\n<button style="padding:10px 18px;background:#8064ff;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;" onclick="alert('Artifact Sandbox Working!')">Click Interactive Demo</button>`,
+                            "html",
+                            "Interactive Sandbox"
+                          );
+                        } else {
+                          setShowCanvas(true);
+                        }
+                      }}
+                      title="Open Live Sandbox Canvas"
+                    >
+                      ⚡ Canvas Sandbox
+                    </button>
+
+                    <button
                       className="secondary"
                       onClick={() =>
                         setView("conversations")
@@ -1705,11 +1891,11 @@ export default function Home() {
                         <button
                           onClick={() =>
                             setChatInput(
-                              "What can you help me with?"
+                              "Generate an interactive HTML pricing card component with glowing styles."
                             )
                           }
                         >
-                          What can you help me with?
+                          ⚡ Generate UI Artifact
                         </button>
 
                         <button
@@ -1748,7 +1934,7 @@ export default function Home() {
                             </span>
 
                             <div className="message-content">
-                              {item.content}
+                              {renderFormattedContent(item.content)}
                             </div>
                           </div>
                         </div>
@@ -2168,6 +2354,119 @@ export default function Home() {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* ARTIFACTS / LIVE CANVAS SANDBOX (Feature 4) */}
+      {showCanvas && (
+        <div
+          className="canvas-backdrop"
+          onClick={() => setShowCanvas(false)}
+        >
+          <div
+            className="canvas-drawer"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="canvas-drawer-header">
+              <div className="canvas-title-group">
+                <span className="canvas-pulse-icon">⚡</span>
+                <div>
+                  <h3>{activeArtifact?.title || "Interactive Sandbox Canvas"}</h3>
+                  <span className="canvas-lang-badge">
+                    {activeArtifact?.language?.toUpperCase() || "HTML"} RUNTIME
+                  </span>
+                </div>
+              </div>
+
+              <div className="canvas-header-controls">
+                <div className="canvas-view-tabs">
+                  <button
+                    type="button"
+                    className={`canvas-tab ${artifactTab === "preview" ? "active" : ""}`}
+                    onClick={() => setArtifactTab("preview")}
+                  >
+                    ▶ Live Preview
+                  </button>
+                  <button
+                    type="button"
+                    className={`canvas-tab ${artifactTab === "code" ? "active" : ""}`}
+                    onClick={() => setArtifactTab("code")}
+                  >
+                    &lt;&gt; Code Inspector
+                  </button>
+                </div>
+
+                {artifactTab === "preview" && (
+                  <div className="canvas-device-toggle">
+                    <button
+                      type="button"
+                      className={`device-btn ${artifactDevice === "desktop" ? "active" : ""}`}
+                      onClick={() => setArtifactDevice("desktop")}
+                      title="Desktop View"
+                    >
+                      🖥 Desktop
+                    </button>
+                    <button
+                      type="button"
+                      className={`device-btn ${artifactDevice === "mobile" ? "active" : ""}`}
+                      onClick={() => setArtifactDevice("mobile")}
+                      title="Mobile View (375px)"
+                    >
+                      📱 Mobile
+                    </button>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  className="canvas-download-btn"
+                  onClick={() => {
+                    const blob = new Blob([activeArtifact?.rawCode || activeArtifact?.code || ""], {
+                      type: "text/plain",
+                    });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `artifact-${Date.now()}.${activeArtifact?.language === "jsx" ? "jsx" : activeArtifact?.language === "svg" ? "svg" : "html"}`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    setMessage("Artifact file downloaded!");
+                  }}
+                  title="Download File"
+                >
+                  📥 Export
+                </button>
+
+                <button
+                  type="button"
+                  className="canvas-close-btn"
+                  onClick={() => setShowCanvas(false)}
+                  title="Close Canvas"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            <div className="canvas-body">
+              {artifactTab === "preview" ? (
+                <div className={`canvas-preview-frame-wrap ${artifactDevice}`}>
+                  <iframe
+                    title="Live Artifact Sandbox"
+                    srcDoc={activeArtifact?.code || "<h2 style='color:#fff;font-family:sans-serif'>No code to preview. Run a code block from chat.</h2>"}
+                    sandbox="allow-scripts allow-modals allow-forms allow-same-origin"
+                    className="canvas-iframe"
+                  />
+                </div>
+              ) : (
+                <div className="canvas-code-inspector">
+                  <pre className="canvas-pre">
+                    <code>{activeArtifact?.rawCode || activeArtifact?.code}</code>
+                  </pre>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
