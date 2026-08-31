@@ -2275,6 +2275,270 @@ nav {
 }
 
 /* ============================================================
+   TOPBAR QUICK ACTION PILLS (PDF & AUTOMATIONS)
+   ============================================================ */
+
+.quick-action-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.quick-action-pill-btn:hover {
+  border-color: var(--primary);
+  transform: translateY(-1px);
+  color: var(--primary);
+}
+
+.quick-action-pill-btn.auto-btn {
+  background: var(--primary-subtle);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.quick-action-pill-btn.auto-btn:hover {
+  background: var(--primary);
+  color: #fff;
+}
+
+/* ============================================================
+   TEAM MEMBERS COLLABORATION (FEATURE 3)
+   ============================================================ */
+
+.team-members-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.team-member-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: all 0.15s ease;
+}
+
+.team-member-card:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.team-member-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.team-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 14px;
+  box-shadow: 0 0 12px var(--primary-glow);
+}
+
+.member-role-badge {
+  font-size: 9.5px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 99px;
+  letter-spacing: 0.05em;
+}
+
+.member-role-badge.admin { background: rgba(168, 85, 247, 0.2); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
+.member-role-badge.member { background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+.member-role-badge.viewer { background: rgba(148, 163, 184, 0.2); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.3); }
+
+.team-member-details strong {
+  display: block;
+  font-size: 14px;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+.team-member-details span {
+  font-size: 11.5px;
+  color: var(--muted);
+  word-break: break-all;
+}
+
+.team-member-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+}
+
+.member-status-pill {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.member-remove-btn {
+  color: var(--muted);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.member-remove-btn:hover {
+  color: var(--danger);
+}
+
+/* ============================================================
+   AI AUTOMATIONS MODAL (FEATURE 5)
+   ============================================================ */
+
+.automations-modal {
+  max-width: 600px;
+  width: 100%;
+}
+
+.automations-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.automations-modal-head h2 {
+  margin: 0 0 4px;
+  font-size: 18px;
+  color: var(--text);
+}
+
+.automations-modal-head p {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.modal-close-x {
+  font-size: 16px;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 4px;
+}
+
+.automations-agent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.agent-rule-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  gap: 12px;
+  transition: all 0.15s ease;
+}
+
+.agent-rule-card:hover {
+  border-color: var(--primary);
+}
+
+.agent-rule-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.agent-icon {
+  font-size: 20px;
+  padding: 6px;
+  background: var(--panel);
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.agent-rule-info strong {
+  display: block;
+  font-size: 13px;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+.agent-rule-info span {
+  font-size: 11.5px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.run-agent-btn {
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.12s ease;
+}
+
+.run-agent-btn:hover:not(:disabled) {
+  filter: brightness(1.15);
+  transform: translateY(-1px);
+}
+
+.agent-live-logs {
+  background: #000;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-family: monospace;
+  font-size: 11px;
+}
+
+.logs-title {
+  color: var(--primary);
+  font-weight: 700;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.logs-stream {
+  max-height: 120px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.log-line {
+  color: #a7f3d0;
+  line-height: 1.4;
+}
+
+/* ============================================================
    13. MOBILE RESPONSIVE
    ============================================================ */
 

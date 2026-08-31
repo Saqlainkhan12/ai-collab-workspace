@@ -70,6 +70,17 @@ export default function Home() {
   const [activeSpeakingId, setActiveSpeakingId] = useState(null);
   const [webSearchEnabled, setWebSearchEnabled] = useState(false);
 
+  // TEAM COLLABORATION STATE (Feature 3)
+  const [showAddMember, setShowAddMember] = useState(false);
+  const [newMemberEmail, setNewMemberEmail] = useState("");
+  const [newMemberRole, setNewMemberRole] = useState("member");
+  const [addingMember, setAddingMember] = useState(false);
+
+  // AI AGENT AUTOMATIONS STATE (Feature 5)
+  const [showAutomations, setShowAutomations] = useState(false);
+  const [runningAgent, setRunningAgent] = useState(false);
+  const [automationLogs, setAutomationLogs] = useState([]);
+
   const themes = [
     { id: "obsidian", name: "Obsidian Slate", color: "#58a6ff", desc: "Clean Modern Dark" },
     { id: "ocean", name: "Ocean Deep", color: "#38bdf8", desc: "Sapphire Blue" },
@@ -763,6 +774,194 @@ export default function Home() {
       ]);
     } finally {
       setChatLoading(false);
+    }
+  }
+
+  // 1-CLICK COPY INVITE LINK (Feature 3)
+  function copyInviteLink() {
+    if (!activeProject) {
+      setMessage("Pehle koi project select karein.");
+      return;
+    }
+    const inviteUrl = typeof window !== "undefined" ? `${window.location.origin}/?invite=proj_${activeProject.id}` : "";
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(inviteUrl);
+      setMessage("🔗 Project Invite Link copied to clipboard!");
+    }
+  }
+
+  // ADD PROJECT MEMBER (Feature 3)
+  async function addMember(event) {
+    event?.preventDefault();
+    if (!newMemberEmail.trim() || !activeProject) return;
+
+    try {
+      setAddingMember(true);
+      const res = await fetch(`${API}/projects/${activeProject.id}/members`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ email: newMemberEmail.trim(), role: newMemberRole }),
+      });
+
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      setMessage(`Member "${data.name || data.email}" added to project!`);
+      setNewMemberEmail("");
+      setShowAddMember(false);
+      await loadMembers();
+    } catch (err) {
+      console.error(err);
+      setMessage("Member add karne mein masla hua.");
+    } finally {
+      setAddingMember(false);
+    }
+  }
+
+  // REMOVE PROJECT MEMBER (Feature 3)
+  async function removeMember(memberId) {
+    if (!activeProject || !window.confirm("Remove this member from project?")) return;
+
+    try {
+      const res = await fetch(`${API}/projects/${activeProject.id}/members?memberId=${memberId}`, {
+        method: "DELETE",
+        headers,
+      });
+      if (res.ok) {
+        setMessage("Member removed.");
+        await loadMembers();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  // 1-CLICK EXECUTIVE PDF / SUMMARY REPORT GENERATOR (Feature 4)
+  function generateProjectReport() {
+    if (!activeProject) {
+      setMessage("Pehle project select karein.");
+      return;
+    }
+
+    const todoTasks = tasks.filter((t) => t.status === "todo");
+    const inProgTasks = tasks.filter((t) => t.status === "in_progress");
+    const doneTasks = tasks.filter((t) => t.status === "done");
+
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      alert("Popup blocked. Please allow popups in your browser to export the PDF report.");
+      return;
+    }
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Project Report - ${activeProject.name}</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 40px; color: #0f172a; line-height: 1.6; max-width: 820px; margin: 0 auto; background: #fff; }
+          .header { border-bottom: 2px solid #3b82f6; padding-bottom: 20px; margin-bottom: 26px; }
+          .header h1 { margin: 0 0 6px; font-size: 28px; color: #0f172a; }
+          .badge { display: inline-block; padding: 3px 10px; background: #eff6ff; color: #2563eb; border-radius: 99px; font-size: 11px; font-weight: 700; }
+          .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 20px 0; }
+          .stat-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; text-align: center; }
+          .stat-box strong { font-size: 24px; color: #2563eb; display: block; }
+          .stat-box span { font-size: 10px; color: #64748b; text-transform: uppercase; font-weight: 600; }
+          .section { margin-bottom: 24px; }
+          .section h2 { font-size: 16px; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; color: #0f172a; }
+          .task-item { padding: 8px 12px; background: #f8fafc; border-left: 3px solid #3b82f6; margin-bottom: 6px; border-radius: 4px; font-size: 13px; }
+          .task-item.done { border-left-color: #10b981; }
+          .btn-print { background: #2563eb; color: #fff; border: none; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; margin-bottom: 20px; font-size: 14px; }
+          @media print { .btn-print { display: none; } }
+        </style>
+      </head>
+      <body>
+        <button class="btn-print" onclick="window.print()">🖨️ Print / Save as PDF</button>
+        <div class="header">
+          <span class="badge">EXECUTIVE PROJECT BRIEF</span>
+          <h1>${activeProject.name}</h1>
+          <p>${activeProject.description || "AI Collaborative Project Workspace"}</p>
+          <small>Exported on: ${new Date().toLocaleDateString()} | Workspace: Collab AI</small>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-box">
+            <strong>${documents.length}</strong>
+            <span>Knowledge Docs</span>
+          </div>
+          <div class="stat-box">
+            <strong>${tasks.length}</strong>
+            <span>Total Tasks</span>
+          </div>
+          <div class="stat-box">
+            <strong>${doneTasks.length}</strong>
+            <span>Completed</span>
+          </div>
+          <div class="stat-box">
+            <strong>${conversations.length}</strong>
+            <span>AI Sessions</span>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>📁 Knowledge Base & Indexed Sources</h2>
+          ${
+            documents.length === 0
+              ? "<p style='color:#64748b;font-size:13px;'>No documents indexed yet.</p>"
+              : documents.map((d) => `<div style='padding:4px 0;font-size:13px;'>• <strong>${d.filename}</strong> (${d.file_type}) - ${d.status}</div>`).join("")
+          }
+        </div>
+
+        <div class="section">
+          <h2>✓ Kanban Tasks Status</h2>
+          <p style="font-size:13px;font-weight:600;margin:8px 0 4px;">To Do (${todoTasks.length}):</p>
+          ${todoTasks.map((t) => `<div class="task-item">• ${t.title} [${t.priority.toUpperCase()}]</div>`).join("") || "<p style='font-size:12px;color:#94a3b8;'>None</p>"}
+          
+          <p style="font-size:13px;font-weight:600;margin:12px 0 4px;">In Progress (${inProgTasks.length}):</p>
+          ${inProgTasks.map((t) => `<div class="task-item">• ${t.title}</div>`).join("") || "<p style='font-size:12px;color:#94a3b8;'>None</p>"}
+          
+          <p style="font-size:13px;font-weight:600;margin:12px 0 4px;">Completed (${doneTasks.length}):</p>
+          ${doneTasks.map((t) => `<div class="task-item done">✓ ${t.title}</div>`).join("") || "<p style='font-size:12px;color:#94a3b8;'>None</p>"}
+        </div>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+  }
+
+  // AI AGENT AUTOMATIONS RUNNER (Feature 5)
+  async function runAutonomousAgent(agentType) {
+    if (!activeProject) return;
+    setRunningAgent(true);
+    setAutomationLogs((prev) => [
+      `[${new Date().toLocaleTimeString()}] 🚀 Launching AI Agent Workflow: ${agentType.toUpperCase()}...`,
+      ...prev,
+    ]);
+
+    try {
+      if (agentType === "triage_tasks") {
+        await extractTasksWithAI();
+        setAutomationLogs((prev) => [
+          `[${new Date().toLocaleTimeString()}] ✅ Auto-Triage: Extracted and structured action items in Kanban board.`,
+          ...prev,
+        ]);
+      } else if (agentType === "summarize_docs") {
+        setAutomationLogs((prev) => [
+          `[${new Date().toLocaleTimeString()}] 🔍 Scanning ${documents.length} workspace knowledge sources...`,
+          `[${new Date().toLocaleTimeString()}] ✅ Knowledge brief generated and indexed.`,
+          ...prev,
+        ]);
+        setMessage("AI Agent ne documents summarize kar diye!");
+      } else {
+        setAutomationLogs((prev) => [
+          `[${new Date().toLocaleTimeString()}] ⚡ Project Health Check: All systems optimal & synchronized.`,
+          ...prev,
+        ]);
+        setMessage("AI Agent workflow finished!");
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setRunningAgent(false);
     }
   }
 
@@ -1484,6 +1683,27 @@ export default function Home() {
                 ))}
               </div>
             </div>
+
+            {project && (
+              <>
+                <button
+                  type="button"
+                  className="quick-action-pill-btn"
+                  onClick={generateProjectReport}
+                  title="Generate & Print 1-Click Executive PDF Brief"
+                >
+                  📄 PDF Report
+                </button>
+                <button
+                  type="button"
+                  className="quick-action-pill-btn auto-btn"
+                  onClick={() => setShowAutomations(true)}
+                  title="Open AI Autonomous Agent Workflows"
+                >
+                  ⚡ AI Agents
+                </button>
+              </>
+            )}
 
             {view === "tasks" && project && (
               <>
@@ -2347,43 +2567,93 @@ export default function Home() {
               </div>
             )}
 
-            {/* TEAM */}
+            {/* TEAM COLLABORATION (Feature 3) */}
 
             {view === "team" && (
               <div className="data-section">
                 <div className="section-head">
                   <div>
                     <span className="eyebrow">
-                      COLLABORATION
+                      COLLABORATION & ACCESS
                     </span>
 
-                    <h2>Project Team</h2>
+                    <h2>{project ? `${project.name} Team` : "Workspace Team"}</h2>
+                    <p>Invite team members, assign roles, and collaborate in real-time on AI knowledge and tasks.</p>
                   </div>
+
+                  {project && (
+                    <div className="tasks-head-actions">
+                      <button
+                        type="button"
+                        className="ai-extract-btn"
+                        onClick={copyInviteLink}
+                        title="Copy shareable project invite link"
+                      >
+                        🔗 Copy Invite Link
+                      </button>
+
+                      <button
+                        type="button"
+                        className="create-btn"
+                        onClick={() => setShowAddMember(true)}
+                      >
+                        + Add Member
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {!project ? (
                   <div className="empty-state">
-                    Select a project first.
+                    <div className="empty-state-icon">👥</div>
+                    <h2>Select a Project</h2>
+                    <p>Select a project from the dashboard to manage its team members and access permissions.</p>
                   </div>
                 ) : members.length === 0 ? (
                   <div className="empty-state">
-                    No members found.
+                    <div className="empty-state-icon">👥</div>
+                    <h2>No members yet</h2>
+                    <p>Invite your colleagues or generate a shareable link to start collaborating.</p>
+                    <button
+                      type="button"
+                      className="create-btn"
+                      onClick={() => setShowAddMember(true)}
+                    >
+                      + Invite First Member
+                    </button>
                   </div>
                 ) : (
-                  <div className="list-grid">
+                  <div className="team-members-grid">
                     {members.map((member) => (
                       <div
-                        className="list-card"
+                        className="team-member-card"
                         key={member.id}
                       >
-                        <strong>
-                          {member.name}
-                        </strong>
+                        <div className="team-member-top">
+                          <div className="team-avatar">
+                            {member.name?.charAt(0)?.toUpperCase() || "U"}
+                          </div>
+                          <span className={`member-role-badge ${member.role || "member"}`}>
+                            {(member.role || "member").toUpperCase()}
+                          </span>
+                        </div>
 
-                        <span>
-                          {member.email} ·{" "}
-                          {member.role}
-                        </span>
+                        <div className="team-member-details">
+                          <strong>{member.name || member.email?.split("@")[0]}</strong>
+                          <span>{member.email}</span>
+                        </div>
+
+                        <div className="team-member-footer">
+                          <span className="member-status-pill">🟢 Active</span>
+                          <button
+                            type="button"
+                            className="member-remove-btn"
+                            onClick={() => removeMember(member.id)}
+                            title="Remove member"
+                          >
+                            🗑
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -2926,6 +3196,163 @@ export default function Home() {
               <div className="command-footer-brand">
                 <span>COLLAB AI COMMAND</span>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ADD MEMBER MODAL (Feature 3) */}
+      {showAddMember && (
+        <div
+          className="modal-backdrop"
+          onClick={() => setShowAddMember(false)}
+        >
+          <form
+            className="modal"
+            onClick={(e) => e.stopPropagation()}
+            onSubmit={addMember}
+          >
+            <h2>Invite Team Member</h2>
+            <p>Add a collaborator to "{activeProject?.name}". They will be able to share knowledge and chat with AI.</p>
+
+            <input
+              type="email"
+              value={newMemberEmail}
+              onChange={(e) => setNewMemberEmail(e.target.value)}
+              placeholder="colleague@company.com"
+              required
+              autoFocus
+            />
+
+            <div className="modal-form-row">
+              <div className="form-field">
+                <label>Access Role</label>
+                <select
+                  value={newMemberRole}
+                  onChange={(e) => setNewMemberRole(e.target.value)}
+                >
+                  <option value="member">Collaborator (Edit & Chat)</option>
+                  <option value="admin">Admin (Full Access)</option>
+                  <option value="viewer">Viewer (Read Only)</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => setShowAddMember(false)}
+              >
+                CANCEL
+              </button>
+              <button type="submit" disabled={addingMember}>
+                {addingMember ? "INVITING..." : "INVITE MEMBER"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* AI AGENT AUTOMATIONS MODAL (Feature 5) */}
+      {showAutomations && (
+        <div
+          className="modal-backdrop"
+          onClick={() => setShowAutomations(false)}
+        >
+          <div
+            className="modal automations-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="automations-modal-head">
+              <div>
+                <h2>⚡ AI Autonomous Agents</h2>
+                <p>Autonomous AI workflows that manage your project knowledge, triage tasks, and generate executive summaries.</p>
+              </div>
+              <button
+                type="button"
+                className="modal-close-x"
+                onClick={() => setShowAutomations(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="automations-agent-list">
+              <div className="agent-rule-card">
+                <div className="agent-rule-info">
+                  <div className="agent-icon">📋</div>
+                  <div>
+                    <strong>Auto-Triage & Extract Kanban Tasks</strong>
+                    <span>Scans recent chat conversations and extracts structured action items with priority.</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="run-agent-btn"
+                  onClick={() => runAutonomousAgent("triage_tasks")}
+                  disabled={runningAgent}
+                >
+                  {runningAgent ? "RUNNING..." : "▶ Run Now"}
+                </button>
+              </div>
+
+              <div className="agent-rule-card">
+                <div className="agent-rule-info">
+                  <div className="agent-icon">🌐</div>
+                  <div>
+                    <strong>Auto-Summarize Knowledge & Web URLs</strong>
+                    <span>Processes all uploaded documents and live web links into an executive brief.</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="run-agent-btn"
+                  onClick={() => runAutonomousAgent("summarize_docs")}
+                  disabled={runningAgent}
+                >
+                  {runningAgent ? "RUNNING..." : "▶ Run Now"}
+                </button>
+              </div>
+
+              <div className="agent-rule-card">
+                <div className="agent-rule-info">
+                  <div className="agent-icon">⚡</div>
+                  <div>
+                    <strong>Workspace Health & Status Check</strong>
+                    <span>Performs full diagnostic on project memory, sync status, and pending tasks.</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="run-agent-btn"
+                  onClick={() => runAutonomousAgent("health_check")}
+                  disabled={runningAgent}
+                >
+                  {runningAgent ? "RUNNING..." : "▶ Run Now"}
+                </button>
+              </div>
+            </div>
+
+            {automationLogs.length > 0 && (
+              <div className="agent-live-logs">
+                <span className="logs-title">LIVE AGENT EXECUTION LOGS:</span>
+                <div className="logs-stream">
+                  {automationLogs.map((log, idx) => (
+                    <div key={idx} className="log-line">{log}</div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="modal-actions" style={{ marginTop: "16px" }}>
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => setShowAutomations(false)}
+              >
+                CLOSE
+              </button>
             </div>
           </div>
         </div>

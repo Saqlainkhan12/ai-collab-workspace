@@ -35,6 +35,10 @@ export async function POST(request, { params }) {
     const body = await request.json();
     const { email, role = "member" } = body;
 
+    if (!email) {
+      return NextResponse.json({ detail: "Email is required" }, { status: 400 });
+    }
+
     let users = await sql`SELECT id, name, email FROM users WHERE email = ${email} LIMIT 1;`;
     let user;
     if (users.length === 0) {
@@ -63,7 +67,31 @@ export async function POST(request, { params }) {
       name: user.name,
       email: user.email,
       role: insertedMember[0].role,
+      joined_at: insertedMember[0].joined_at,
     });
+  } catch (error) {
+    return NextResponse.json({ detail: error.message }, { status: 500 });
+  }
+}
+
+export async function DELETE(request, { params }) {
+  try {
+    await ensureDbInitialized();
+    const sql = getSql();
+    const projectId = parseInt(params.id, 10);
+    const { searchParams } = new URL(request.url);
+    const memberId = searchParams.get("memberId");
+
+    if (!memberId) {
+      return NextResponse.json({ detail: "Member ID required" }, { status: 400 });
+    }
+
+    await sql`
+      DELETE FROM project_members 
+      WHERE id = ${parseInt(memberId, 10)} AND project_id = ${projectId};
+    `;
+
+    return NextResponse.json({ success: true, message: "Member removed" });
   } catch (error) {
     return NextResponse.json({ detail: error.message }, { status: 500 });
   }
