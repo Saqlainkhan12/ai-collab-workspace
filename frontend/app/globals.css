@@ -3142,15 +3142,771 @@ nav {
   box-shadow: 0 0 14px rgba(56, 189, 248, 0.4);
 }
 
-.live-control-btn.end-btn {
-  background: rgba(239, 68, 68, 0.2);
-  border-color: #ef4444;
-  color: #fca5a5;
-}
-
 .live-control-btn.end-btn:hover {
   background: #ef4444;
   color: #fff;
+}
+
+/* ============================================================
+   MASTERMIND 1: AI NEURAL KNOWLEDGE GRAPH
+   ============================================================ */
+
+.graph-section {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.graph-controls-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.graph-filter-pills {
+  display: flex;
+  gap: 6px;
+  background: var(--panel2);
+  padding: 4px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.graph-filter-btn {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.graph-filter-btn:hover {
+  color: var(--text);
+}
+
+.graph-filter-btn.active {
+  background: var(--primary);
+  color: #fff;
+}
+
+.graph-canvas-container {
+  position: relative;
+  width: 100%;
+  height: 520px;
+  background: radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.05) 0%, rgba(15, 23, 42, 0.6) 100%), var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.graph-interactive-stage {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.graph-svg-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.graph-node text {
+  user-select: none;
+  transition: all 0.2s ease;
+}
+
+.graph-node:hover circle {
+  transform: scale(1.1);
+  stroke-width: 3.5px;
+}
+
+.graph-node-sheet {
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  bottom: 16px;
+  width: 320px;
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 18px;
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.4);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  animation: slideInRight 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.node-sheet-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.node-type-pill {
+  font-size: 10px;
+  font-weight: 800;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.15);
+  padding: 2px 8px;
+  border-radius: 99px;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.sheet-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.graph-node-sheet h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+  color: var(--text);
+}
+
+.node-desc {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+  margin: 0 0 14px;
+}
+
+.node-stats-box {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px;
+  font-size: 11.5px;
+  color: var(--primary);
+  margin-bottom: auto;
+}
+
+.node-actions-row {
+  margin-top: 14px;
+}
+
+.node-act-btn {
+  width: 100%;
+  padding: 8px;
+  border-radius: 6px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* ============================================================
+   MASTERMIND 2: AI VISUAL DESIGN STUDIO
+   ============================================================ */
+
+.studio-composer-box {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.studio-prompt-row {
+  display: flex;
+  gap: 10px;
+}
+
+.studio-prompt-input {
+  flex: 1;
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+}
+
+.studio-prompt-input:focus {
+  border-color: var(--primary);
+}
+
+.studio-generate-btn {
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #a855f7, #38bdf8);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-weight: 700;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.studio-generate-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 16px rgba(168, 85, 247, 0.4);
+}
+
+.studio-presets-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.preset-label {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.studio-preset-pill {
+  font-size: 11px;
+  padding: 3px 9px;
+  border-radius: 99px;
+  border: 1px solid var(--border);
+  background: var(--panel2);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.studio-preset-pill:hover {
+  border-color: var(--primary);
+  color: var(--text);
+}
+
+.studio-preset-pill.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.studio-mockups-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 20px;
+}
+
+.studio-mockup-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.mockup-preview-window {
+  padding: 16px;
+  background: #020617;
+  border-bottom: 1px solid var(--border);
+  min-height: 180px;
+}
+
+.mockup-card-footer {
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--panel2);
+}
+
+.mockup-meta strong {
+  display: block;
+  font-size: 13px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+
+.mockup-meta span {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.mockup-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.mockup-action-btn {
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mockup-action-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* ============================================================
+   MASTERMIND 3: PREDICTIVE AI ANALYTICS & RISK RADAR
+   ============================================================ */
+
+.analytics-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.analytics-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-eyebrow {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--primary);
+  letter-spacing: 0.05em;
+  margin-bottom: 14px;
+  display: block;
+}
+
+.velocity-meter-wrap {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.velocity-circle-gauge {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  border: 4px solid var(--primary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.2);
+}
+
+.gauge-value {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.gauge-label {
+  font-size: 9px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.velocity-info h3 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  color: var(--text);
+}
+
+.velocity-info p {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.mini-stats-row {
+  display: flex;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.risk-status-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.risk-indicator-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+}
+
+.risk-indicator-dot.safe { background: #10b981; }
+
+.risk-analysis-text {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+  margin: 0 0 14px;
+}
+
+.risk-item-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.risk-item-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--panel2);
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+.risk-badge {
+  font-size: 9px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.risk-title {
+  font-size: 12px;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.team-heat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.team-heat-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+}
+
+.member-heat-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 180px;
+}
+
+.member-avatar-mini {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+}
+
+.heat-bar-wrap {
+  flex: 1;
+  height: 8px;
+  background: var(--panel2);
+  border-radius: 99px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.heat-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #38bdf8, #a855f7);
+  border-radius: 99px;
+}
+
+.heat-pct {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 600;
+  width: 70px;
+  text-align: right;
+}
+
+/* ============================================================
+   MASTERMIND 4 & 5: COPILOT & AUDIO MEMO MODALS
+   ============================================================ */
+
+.copilot-power-modal,
+.audio-memo-modal {
+  max-width: 680px;
+  width: 100%;
+}
+
+.modal-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.copilot-action-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.copilot-card-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 14px;
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.copilot-card-btn:hover {
+  border-color: var(--primary);
+  transform: translateY(-1px);
+}
+
+.copilot-card-btn.active {
+  border-color: var(--primary);
+  background: rgba(56, 189, 248, 0.1);
+}
+
+.copilot-icon {
+  font-size: 20px;
+  margin-bottom: 4px;
+}
+
+.copilot-card-btn strong {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.copilot-card-btn span {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.copilot-loading-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 30px;
+}
+
+.copilot-result-box {
+  background: #020617;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.copilot-result-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.copilot-result-head strong {
+  font-size: 13px;
+  color: var(--primary);
+}
+
+.copilot-copy-btn {
+  padding: 4px 10px;
+  background: var(--primary);
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.copilot-output-pre {
+  margin: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  font-family: monospace;
+  font-size: 11.5px;
+  color: #e2e8f0;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.audio-record-stage {
+  display: flex;
+  justify-content: center;
+  padding: 20px 0;
+}
+
+.audio-big-mic-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 24px 36px;
+  border-radius: 16px;
+  background: var(--panel2);
+  border: 2px dashed var(--border);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.audio-big-mic-btn.recording {
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.15);
+  animation: pulseRecording 1.5s infinite ease-in-out;
+}
+
+@keyframes pulseRecording {
+  0%, 100% { box-shadow: 0 0 0 rgba(239, 68, 68, 0.4); }
+  50% { box-shadow: 0 0 24px rgba(239, 68, 68, 0.7); }
+}
+
+.mic-symbol {
+  font-size: 36px;
+}
+
+.audio-big-mic-btn strong {
+  font-size: 14px;
+  color: var(--text);
+}
+
+.memo-transcript-card {
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.memo-card-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--primary);
+  display: block;
+  margin-bottom: 6px;
+}
+
+.memo-text {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+.memo-processing-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  background: rgba(56, 189, 248, 0.1);
+  border-radius: 8px;
+  color: #38bdf8;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.memo-extracted-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.memo-extracted-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.memo-extracted-head strong {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.add-extracted-tasks-btn {
+  padding: 6px 12px;
+  background: #10b981;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.memo-actions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.memo-action-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.memo-action-check {
+  color: #10b981;
+  font-weight: bold;
+}
+
+.memo-action-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex: 1;
+}
+
+.memo-action-info strong {
+  font-size: 12.5px;
+  color: var(--text);
 }
 
 /* ============================================================

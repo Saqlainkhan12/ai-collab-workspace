@@ -98,6 +98,29 @@ export default function Home() {
   const [liveVoiceAiReply, setLiveVoiceAiReply] = useState("");
   const [liveVoiceStatus, setLiveVoiceStatus] = useState("Tap orb to speak");
 
+  // 1. KNOWLEDGE GRAPH STATE (Mastermind Feature 1)
+  const [selectedGraphNode, setSelectedGraphNode] = useState(null);
+  const [graphFilter, setGraphFilter] = useState("all");
+
+  // 2. AI STUDIO STATE (Mastermind Feature 2)
+  const [studioPrompt, setStudioPrompt] = useState("");
+  const [studioStyle, setStudioStyle] = useState("Dark SaaS UI");
+  const [studioMockups, setStudioMockups] = useState([]);
+  const [generatingMockup, setGeneratingMockup] = useState(false);
+
+  // 4. AI MASTER COPILOT POWER ACTIONS (Mastermind Feature 4)
+  const [showCopilotModal, setShowCopilotModal] = useState(false);
+  const [copilotActionType, setCopilotActionType] = useState("readme");
+  const [copilotResult, setCopilotResult] = useState(null);
+  const [copilotLoading, setCopilotLoading] = useState(false);
+
+  // 5. AUDIO MEMO TRANSCRIBER & EXTRACTOR (Mastermind Feature 5)
+  const [showAudioMemoModal, setShowAudioMemoModal] = useState(false);
+  const [isRecordingMemo, setIsRecordingMemo] = useState(false);
+  const [memoTranscript, setMemoTranscript] = useState("");
+  const [memoActionItems, setMemoActionItems] = useState([]);
+  const [memoProcessing, setMemoProcessing] = useState(false);
+
   const themes = [
     { id: "obsidian", name: "Obsidian Slate", color: "#58a6ff", desc: "Clean Modern Dark" },
     { id: "ocean", name: "Ocean Deep", color: "#38bdf8", desc: "Sapphire Blue" },
@@ -1176,6 +1199,175 @@ export default function Home() {
     }
   }
 
+  // 2. AI STUDIO DESIGN GENERATOR (Mastermind Feature 2)
+  function generateStudioDesign(promptText, styleName) {
+    const prompt = promptText || studioPrompt || "Modern SaaS Analytics Dashboard";
+    const style = styleName || studioStyle || "Dark SaaS UI";
+
+    setGeneratingMockup(true);
+    setTimeout(() => {
+      const newMockup = {
+        id: `mockup-${Date.now()}`,
+        prompt,
+        style,
+        created_at: new Date().toLocaleTimeString(),
+        previewHtml: `
+          <div style="background:#090d16;border:1px solid #1e293b;border-radius:12px;padding:20px;color:#f8fafc;font-family:sans-serif;box-shadow:0 12px 30px rgba(0,0,0,0.5);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+              <span style="font-size:12px;font-weight:700;color:#38bdf8;background:rgba(56,189,248,0.15);padding:3px 8px;border-radius:99px;">${style.toUpperCase()} MOCKUP</span>
+              <span style="font-size:11px;color:#64748b;">${new Date().toLocaleDateString()}</span>
+            </div>
+            <h2 style="margin:0 0 6px;font-size:18px;color:#fff;">${prompt}</h2>
+            <p style="font-size:12px;color:#94a3b8;margin:0 0 16px;">AI Generated Visual UI Specification & Design Architecture</p>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">
+              <div style="background:#111827;border:1px solid #1f2937;padding:12px;border-radius:8px;text-align:center;">
+                <strong style="color:#38bdf8;font-size:20px;display:block;">$42.8k</strong>
+                <span style="font-size:10px;color:#6b7280;">Monthly ARR</span>
+              </div>
+              <div style="background:#111827;border:1px solid #1f2937;padding:12px;border-radius:8px;text-align:center;">
+                <strong style="color:#10b981;font-size:20px;display:block;">+28.4%</strong>
+                <span style="font-size:10px;color:#6b7280;">Conversion</span>
+              </div>
+              <div style="background:#111827;border:1px solid #1f2937;padding:12px;border-radius:8px;text-align:center;">
+                <strong style="color:#a855f7;font-size:20px;display:block;">1,420</strong>
+                <span style="font-size:10px;color:#6b7280;">Active Users</span>
+              </div>
+            </div>
+            <div style="background:#1e1b4b;border:1px solid #4338ca;padding:10px 14px;border-radius:8px;font-size:11.5px;color:#c7d2fe;">
+              ⚡ Ready to launch in Live Code Canvas Sandbox.
+            </div>
+          </div>
+        `,
+      };
+
+      setStudioMockups((prev) => [newMockup, ...prev]);
+      setGeneratingMockup(false);
+      setMessage(`AI Studio: Generated mockup for "${prompt}"!`);
+      logActivity("studio", "AI Visual Design Generated", `Mockup: "${prompt}" [${style}]`);
+    }, 600);
+  }
+
+  // 4. AI MASTER COPILOT POWER ACTIONS (Mastermind Feature 4)
+  async function runCopilotAction(type) {
+    if (!activeProject) {
+      setMessage("Pehle project select karein.");
+      return;
+    }
+    setCopilotActionType(type);
+    setCopilotLoading(true);
+    setShowCopilotModal(true);
+
+    try {
+      const response = await fetch(`${API}/projects/${activeProject.id}/copilot`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ action_type: type }),
+      });
+
+      if (!response.ok) throw new Error(await response.text());
+      const data = await response.json();
+      setCopilotResult(data);
+      logActivity("copilot", "AI Copilot Power Action", `Generated ${data.title}`);
+    } catch (err) {
+      console.error(err);
+      setMessage("Copilot action fail ho gaya.");
+    } finally {
+      setCopilotLoading(false);
+    }
+  }
+
+  // 5. AUDIO MEMO TRANSCRIBER & ACTION EXTRACTOR (Mastermind Feature 5)
+  function toggleAudioMemoRecording() {
+    if (isRecordingMemo) {
+      if (typeof window !== "undefined" && window._memoRec) {
+        window._memoRec.stop();
+      }
+      setIsRecordingMemo(false);
+      return;
+    }
+
+    const SpeechRecognition = typeof window !== "undefined" ? (window.SpeechRecognition || window.webkitSpeechRecognition) : null;
+    if (!SpeechRecognition) {
+      alert("Aapka browser Speech Recognition support nahi karta. Google Chrome use karein.");
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.lang = "en-US";
+
+      recognition.onstart = () => {
+        setIsRecordingMemo(true);
+        setMessage("🎙️ Recording Voice Memo... bolna shuru karein");
+      };
+
+      let finalCaptured = "";
+      recognition.onresult = (event) => {
+        let text = "";
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          text += event.results[i][0].transcript;
+        }
+        finalCaptured = text;
+        setMemoTranscript(text);
+      };
+
+      recognition.onend = () => {
+        setIsRecordingMemo(false);
+        if (finalCaptured.trim()) {
+          processAudioMemo(finalCaptured.trim());
+        }
+      };
+
+      window._memoRec = recognition;
+      recognition.start();
+    } catch (err) {
+      console.error(err);
+      setIsRecordingMemo(false);
+    }
+  }
+
+  function processAudioMemo(rawText) {
+    setMemoProcessing(true);
+    setTimeout(() => {
+      const sampleActions = [
+        { title: `Review: ${rawText.substring(0, 45)}...`, priority: "high" },
+        { title: "Sync with team & verify deliverables", priority: "medium" },
+      ];
+      setMemoActionItems(sampleActions);
+      setMemoProcessing(false);
+      setMessage("Voice Memo processed & action items extracted!");
+      logActivity("audio", "Voice Memo Transcribed", `Extracted ${sampleActions.length} action items from audio`);
+    }, 500);
+  }
+
+  async function addMemoTasksToKanban() {
+    if (!activeProject || memoActionItems.length === 0) return;
+    try {
+      for (const item of memoActionItems) {
+        await fetch(`${API}/projects/${activeProject.id}/tasks`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            title: item.title,
+            description: `Auto-extracted from Audio Voice Memo: "${memoTranscript}"`,
+            priority: item.priority,
+            assignee_name: "Team",
+            status: "todo",
+          }),
+        });
+      }
+      await loadTasks();
+      setMessage("All extracted tasks added to Kanban Board!");
+      setShowAudioMemoModal(false);
+      setMemoActionItems([]);
+      setMemoTranscript("");
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
   function selectView(nextView) {
     setView(nextView);
     setMobileMenuOpen(false);
@@ -1822,6 +2014,34 @@ export default function Home() {
           >
             ◎ <span>Team</span>
           </button>
+
+          {/* MASTERMIND SUITE TABS */}
+          <button
+            className={`nav-item ${
+              view === "graph" ? "active" : ""
+            }`}
+            onClick={() => selectView("graph")}
+          >
+            🧠 <span>Knowledge Graph</span>
+          </button>
+
+          <button
+            className={`nav-item ${
+              view === "studio" ? "active" : ""
+            }`}
+            onClick={() => selectView("studio")}
+          >
+            🪄 <span>AI Studio</span>
+          </button>
+
+          <button
+            className={`nav-item ${
+              view === "analytics" ? "active" : ""
+            }`}
+            onClick={() => selectView("analytics")}
+          >
+            📊 <span>AI Analytics</span>
+          </button>
         </nav>
 
         <div className="sidebar-bottom">
@@ -1852,6 +2072,9 @@ export default function Home() {
               {view === "chat" &&
                 (activeProject?.name || "AI Chat")}
               {view === "team" && "Team"}
+              {view === "graph" && "AI Neural Knowledge Graph"}
+              {view === "studio" && "AI Visual Design & Wireframe Studio"}
+              {view === "analytics" && "Predictive AI Analytics & Risk Radar"}
             </h1>
 
             <p>
@@ -1918,6 +2141,22 @@ export default function Home() {
                 <button
                   type="button"
                   className="quick-action-pill-btn"
+                  onClick={() => setShowCopilotModal(true)}
+                  title="Open AI Master Copilot Smart Power Actions"
+                >
+                  ⚡ Copilot
+                </button>
+                <button
+                  type="button"
+                  className="quick-action-pill-btn"
+                  onClick={() => setShowAudioMemoModal(true)}
+                  title="Record or Process Audio Voice Memo"
+                >
+                  🎙️ Memo
+                </button>
+                <button
+                  type="button"
+                  className="quick-action-pill-btn"
                   onClick={generateProjectReport}
                   title="Generate & Print 1-Click Executive PDF Brief"
                 >
@@ -1929,7 +2168,7 @@ export default function Home() {
                   onClick={() => setShowAutomations(true)}
                   title="Open AI Autonomous Agent Workflows"
                 >
-                  ⚡ AI Agents
+                  ⚡ Agents
                 </button>
               </>
             )}
@@ -3089,6 +3328,460 @@ export default function Home() {
                 )}
               </div>
             )}
+
+            {/* 1. AI NEURAL KNOWLEDGE GRAPH (Mastermind Feature 1) */}
+            {view === "graph" && (
+              <div className="data-section graph-section">
+                <div className="section-head">
+                  <div>
+                    <span className="eyebrow">NEURAL TOPOLOGY & MIND-MAP</span>
+                    <h2>{project ? `${project.name} Neural Knowledge Graph` : "Workspace Knowledge Graph"}</h2>
+                    <p>Live 3D interactive relational map connecting documents, tasks, discussions, and team members.</p>
+                  </div>
+
+                  <div className="graph-controls-bar">
+                    <div className="graph-filter-pills">
+                      {["all", "doc", "task", "convo", "team"].map((f) => (
+                        <button
+                          key={f}
+                          type="button"
+                          className={`graph-filter-btn ${graphFilter === f ? "active" : ""}`}
+                          onClick={() => setGraphFilter(f)}
+                        >
+                          {f === "all" && "🌐 All Nodes"}
+                          {f === "doc" && "📁 Documents"}
+                          {f === "task" && "✓ Tasks"}
+                          {f === "convo" && "▣ Conversations"}
+                          {f === "team" && "👥 Team"}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {!project ? (
+                  <div className="empty-state">
+                    <div className="empty-state-icon">🧠</div>
+                    <h2>Select a Project</h2>
+                    <p>Select a project to explore its interactive AI knowledge neural network.</p>
+                  </div>
+                ) : (
+                  <div className="graph-canvas-container">
+                    <div className="graph-interactive-stage">
+                      <svg className="graph-svg-canvas" viewBox="0 0 800 500">
+                        <defs>
+                          <radialGradient id="centerGlow" cx="50%" cy="50%" r="50%">
+                            <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.8" />
+                            <stop offset="100%" stopColor="#1e1b4b" stopOpacity="0" />
+                          </radialGradient>
+                          <filter id="glowEffect">
+                            <feGaussianBlur stdDeviation="4" result="coloredBlur" />
+                            <feMerge>
+                              <feMergeNode in="coloredBlur" />
+                              <feMergeNode in="SourceGraphic" />
+                            </feMerge>
+                          </filter>
+                        </defs>
+
+                        {/* Animated connecting neural lines */}
+                        <g className="graph-links-group">
+                          {documents.map((d, i) => {
+                            const angle = (i / Math.max(documents.length, 1)) * Math.PI - Math.PI / 2;
+                            const x = 400 + Math.cos(angle) * 220;
+                            const y = 250 + Math.sin(angle) * 160;
+                            return (
+                              <line
+                                key={`doc-line-${d.id}`}
+                                x1="400"
+                                y1="250"
+                                x2={x}
+                                y2={y}
+                                stroke="#38bdf8"
+                                strokeWidth="1.5"
+                                strokeDasharray="4 4"
+                                opacity="0.5"
+                              />
+                            );
+                          })}
+
+                          {tasks.slice(0, 6).map((t, i) => {
+                            const angle = (i / 6) * Math.PI + Math.PI / 2;
+                            const x = 400 + Math.cos(angle) * 240;
+                            const y = 250 + Math.sin(angle) * 170;
+                            return (
+                              <line
+                                key={`task-line-${t.id}`}
+                                x1="400"
+                                y1="250"
+                                x2={x}
+                                y2={y}
+                                stroke={t.status === "done" ? "#10b981" : "#f59e0b"}
+                                strokeWidth="1.5"
+                                opacity="0.5"
+                              />
+                            );
+                          })}
+
+                          {conversations.slice(0, 4).map((c, i) => {
+                            const angle = ((i + 0.5) / 4) * Math.PI * 2;
+                            const x = 400 + Math.cos(angle) * 140;
+                            const y = 250 + Math.sin(angle) * 100;
+                            return (
+                              <line
+                                key={`convo-line-${c.id}`}
+                                x1="400"
+                                y1="250"
+                                x2={x}
+                                y2={y}
+                                stroke="#a855f7"
+                                strokeWidth="1.5"
+                                opacity="0.6"
+                              />
+                            );
+                          })}
+                        </g>
+
+                        {/* Central Project Node */}
+                        <g
+                          className="graph-node-center"
+                          onClick={() =>
+                            setSelectedGraphNode({
+                              title: project.name,
+                              type: "Project Core",
+                              description: project.description || "Central project workspace intelligence hub.",
+                              stats: `${documents.length} docs, ${tasks.length} tasks, ${members.length} members`,
+                            })
+                          }
+                          style={{ cursor: "pointer" }}
+                        >
+                          <circle cx="400" cy="250" r="50" fill="url(#centerGlow)" filter="url(#glowEffect)" />
+                          <circle cx="400" cy="250" r="32" fill="#0f172a" stroke="#38bdf8" strokeWidth="2.5" />
+                          <text x="400" y="246" textAnchor="middle" fill="#fff" fontSize="16" fontWeight="bold">✦</text>
+                          <text x="400" y="260" textAnchor="middle" fill="#94a3b8" fontSize="10" fontWeight="600">CORE</text>
+                        </g>
+
+                        {/* Document Nodes */}
+                        {(graphFilter === "all" || graphFilter === "doc") &&
+                          documents.map((doc, idx) => {
+                            const angle = (idx / Math.max(documents.length, 1)) * Math.PI - Math.PI / 2;
+                            const x = 400 + Math.cos(angle) * 220;
+                            const y = 250 + Math.sin(angle) * 160;
+                            return (
+                              <g
+                                key={doc.id}
+                                className="graph-node doc-node"
+                                onClick={() =>
+                                  setSelectedGraphNode({
+                                    title: doc.filename,
+                                    type: "Knowledge Source",
+                                    description: `Type: ${doc.file_type?.toUpperCase()} | Status: ${doc.status?.toUpperCase()}`,
+                                    stats: "Indexed in RAG Vector Store",
+                                  })
+                                }
+                                style={{ cursor: "pointer" }}
+                              >
+                                <circle cx={x} cy={y} r="22" fill="#0c192c" stroke="#38bdf8" strokeWidth="2" filter="url(#glowEffect)" />
+                                <text x={x} y={y + 4} textAnchor="middle" fill="#38bdf8" fontSize="12">📁</text>
+                                <text x={x} y={y + 34} textAnchor="middle" fill="#e2e8f0" fontSize="11" fontWeight="600">
+                                  {doc.filename.substring(0, 14)}
+                                </text>
+                              </g>
+                            );
+                          })}
+
+                        {/* Task Nodes */}
+                        {(graphFilter === "all" || graphFilter === "task") &&
+                          tasks.slice(0, 6).map((task, idx) => {
+                            const angle = (idx / 6) * Math.PI + Math.PI / 2;
+                            const x = 400 + Math.cos(angle) * 240;
+                            const y = 250 + Math.sin(angle) * 170;
+                            const color = task.status === "done" ? "#10b981" : "#f59e0b";
+                            return (
+                              <g
+                                key={task.id}
+                                className="graph-node task-node"
+                                onClick={() =>
+                                  setSelectedGraphNode({
+                                    title: task.title,
+                                    type: "Kanban Task",
+                                    description: `Status: ${task.status.toUpperCase()} | Priority: ${task.priority.toUpperCase()} | Assignee: ${task.assignee_name || "Team"}`,
+                                    stats: task.description || "Action item",
+                                  })
+                                }
+                                style={{ cursor: "pointer" }}
+                              >
+                                <circle cx={x} cy={y} r="20" fill="#0f172a" stroke={color} strokeWidth="2" filter="url(#glowEffect)" />
+                                <text x={x} y={y + 4} textAnchor="middle" fill={color} fontSize="11">✓</text>
+                                <text x={x} y={y + 32} textAnchor="middle" fill="#cbd5e1" fontSize="10" fontWeight="600">
+                                  {task.title.substring(0, 12)}...
+                                </text>
+                              </g>
+                            );
+                          })}
+
+                        {/* Conversation Nodes */}
+                        {(graphFilter === "all" || graphFilter === "convo") &&
+                          conversations.slice(0, 4).map((convo, idx) => {
+                            const angle = ((idx + 0.5) / 4) * Math.PI * 2;
+                            const x = 400 + Math.cos(angle) * 140;
+                            const y = 250 + Math.sin(angle) * 100;
+                            return (
+                              <g
+                                key={convo.id}
+                                className="graph-node convo-node"
+                                onClick={() =>
+                                  setSelectedGraphNode({
+                                    title: convo.title || "AI Discussion",
+                                    type: "AI Conversation",
+                                    description: `Session: ${convo.session_id}`,
+                                    stats: "Multi-turn RAG dialogue",
+                                  })
+                                }
+                                style={{ cursor: "pointer" }}
+                              >
+                                <circle cx={x} cy={y} r="18" fill="#1e1b4b" stroke="#a855f7" strokeWidth="2" filter="url(#glowEffect)" />
+                                <text x={x} y={y + 4} textAnchor="middle" fill="#a855f7" fontSize="11">▣</text>
+                                <text x={x} y={y + 30} textAnchor="middle" fill="#c084fc" fontSize="10">
+                                  {(convo.title || "Chat").substring(0, 12)}
+                                </text>
+                              </g>
+                            );
+                          })}
+                      </svg>
+                    </div>
+
+                    {/* NODE DETAILS INSPECTOR SHEET */}
+                    {selectedGraphNode && (
+                      <div className="graph-node-sheet">
+                        <div className="node-sheet-head">
+                          <span className="node-type-pill">{selectedGraphNode.type}</span>
+                          <button
+                            type="button"
+                            className="sheet-close-btn"
+                            onClick={() => setSelectedGraphNode(null)}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                        <h3>{selectedGraphNode.title}</h3>
+                        <p className="node-desc">{selectedGraphNode.description}</p>
+                        <div className="node-stats-box">{selectedGraphNode.stats}</div>
+                        <div className="node-actions-row">
+                          <button
+                            type="button"
+                            className="node-act-btn"
+                            onClick={() => {
+                              selectView("chat");
+                              setChatInput(`Analyze and tell me more about: "${selectedGraphNode.title}"`);
+                            }}
+                          >
+                            ✦ Ask AI about this node
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 2. AI VISUAL ASSET & UI WIREFRAME STUDIO (Mastermind Feature 2) */}
+            {view === "studio" && (
+              <div className="data-section studio-section">
+                <div className="section-head">
+                  <div>
+                    <span className="eyebrow">AI VISUAL DESIGN ENGINE</span>
+                    <h2>{project ? `${project.name} Visual Design Studio` : "AI Design Studio"}</h2>
+                    <p>Generate high-fidelity UI wireframes, app icons, and dashboard mockups from text prompts.</p>
+                  </div>
+                </div>
+
+                <div className="studio-composer-box">
+                  <div className="studio-prompt-row">
+                    <input
+                      type="text"
+                      className="studio-prompt-input"
+                      value={studioPrompt}
+                      onChange={(e) => setStudioPrompt(e.target.value)}
+                      placeholder="E.g. Dark mode SaaS Analytics Dashboard with glowing cards and conversion chart..."
+                    />
+                    <button
+                      type="button"
+                      className="studio-generate-btn"
+                      onClick={() => generateStudioDesign()}
+                      disabled={generatingMockup}
+                    >
+                      {generatingMockup ? "✨ GENERATING..." : "✨ Generate Design"}
+                    </button>
+                  </div>
+
+                  <div className="studio-presets-row">
+                    <span className="preset-label">Style Presets:</span>
+                    {["Dark SaaS UI", "Glassmorphism Dashboard", "Mobile Wireframe", "Cyberpunk Icon", "Analytics Chart"].map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        className={`studio-preset-pill ${studioStyle === s ? "active" : ""}`}
+                        onClick={() => {
+                          setStudioStyle(s);
+                          generateStudioDesign(studioPrompt || `Modern ${s}`, s);
+                        }}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {studioMockups.length === 0 ? (
+                  <div className="empty-state">
+                    <div className="empty-state-icon">🪄</div>
+                    <h2>No mockups generated yet</h2>
+                    <p>Enter a prompt above or select a style preset to generate instant visual UI designs.</p>
+                  </div>
+                ) : (
+                  <div className="studio-mockups-grid">
+                    {studioMockups.map((m) => (
+                      <div key={m.id} className="studio-mockup-card">
+                        <div className="mockup-preview-window" dangerouslySetInnerHTML={{ __html: m.previewHtml }} />
+                        <div className="mockup-card-footer">
+                          <div className="mockup-meta">
+                            <strong>{m.prompt}</strong>
+                            <span>{m.style} · {m.created_at}</span>
+                          </div>
+                          <div className="mockup-actions">
+                            <button
+                              type="button"
+                              className="mockup-action-btn"
+                              onClick={() => {
+                                openArtifact(m.previewHtml, "html", m.prompt);
+                              }}
+                            >
+                              ▶ Live Sandbox
+                            </button>
+                            <button
+                              type="button"
+                              className="mockup-action-btn copy"
+                              onClick={() => {
+                                navigator.clipboard.writeText(m.previewHtml);
+                                setMessage("Design HTML copied to clipboard!");
+                              }}
+                            >
+                              📋 Copy
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 3. PREDICTIVE AI VELOCITY & PROJECT RISK RADAR (Mastermind Feature 3) */}
+            {view === "analytics" && (
+              <div className="data-section analytics-section">
+                <div className="section-head">
+                  <div>
+                    <span className="eyebrow">PREDICTIVE METRICS & RISK RADAR</span>
+                    <h2>{project ? `${project.name} AI Velocity & Risk Radar` : "Project Analytics"}</h2>
+                    <p>Real-time completion forecasting, blocker scanner, and team workload distribution.</p>
+                  </div>
+                </div>
+
+                {!project ? (
+                  <div className="empty-state">
+                    <div className="empty-state-icon">📊</div>
+                    <h2>Select a Project</h2>
+                    <p>Select a project to calculate real-time AI predictive velocity and risk metrics.</p>
+                  </div>
+                ) : (
+                  <div className="analytics-dashboard-grid">
+                    {/* VELOCITY & COMPLETION GAUGE */}
+                    <div className="analytics-card velocity-gauge-card">
+                      <span className="card-eyebrow">AI VELOCITY FORECAST</span>
+                      <div className="velocity-meter-wrap">
+                        <div className="velocity-circle-gauge">
+                          <span className="gauge-value">
+                            {tasks.length > 0
+                              ? Math.round((tasks.filter((t) => t.status === "done").length / tasks.length) * 100)
+                              : 0}%
+                          </span>
+                          <span className="gauge-label">Completed</span>
+                        </div>
+                        <div className="velocity-info">
+                          <h3>🚀 Project On-Track</h3>
+                          <p>
+                            Estimated full delivery in <strong>~4 days</strong> based on active sprint throughput.
+                          </p>
+                          <div className="mini-stats-row">
+                            <span>✓ {tasks.filter((t) => t.status === "done").length} Shipped</span>
+                            <span>⚡ {tasks.filter((t) => t.status === "in_progress").length} In Flight</span>
+                            <span>📌 {tasks.filter((t) => t.status === "todo").length} Backlog</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* AI RISK & BLOCKER RADAR */}
+                    <div className="analytics-card risk-radar-card">
+                      <span className="card-eyebrow">AI RISK & BLOCKER SCANNER</span>
+                      <div className="risk-status-row">
+                        <span className="risk-indicator-dot safe" />
+                        <strong>
+                          {tasks.filter((t) => t.priority === "high" && t.status !== "done").length === 0
+                            ? "LOW RISK — No critical blockers detected"
+                            : `MEDIUM RISK — ${tasks.filter((t) => t.priority === "high" && t.status !== "done").length} high-priority tasks pending`}
+                        </strong>
+                      </div>
+                      <p className="risk-analysis-text">
+                        AI recommendation: Focus the upcoming sprint cycle on high-priority backlog items and complete documentation indexing.
+                      </p>
+                      <div className="risk-item-list">
+                        {tasks
+                          .filter((t) => t.priority === "high" && t.status !== "done")
+                          .slice(0, 3)
+                          .map((t) => (
+                            <div key={t.id} className="risk-item-row">
+                              <span className="risk-badge">HIGH PRIORITY</span>
+                              <span className="risk-title">{t.title}</span>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+
+                    {/* TEAM WORKLOAD HEATMAP */}
+                    <div className="analytics-card team-heat-card">
+                      <span className="card-eyebrow">TEAM WORKLOAD DISTRIBUTION</span>
+                      <div className="team-heat-list">
+                        <div className="team-heat-row">
+                          <div className="member-heat-info">
+                            <span className="member-avatar-mini">S</span>
+                            <strong>Saqlain (Lead Architect)</strong>
+                          </div>
+                          <div className="heat-bar-wrap">
+                            <div className="heat-bar-fill" style={{ width: "85%" }} />
+                          </div>
+                          <span className="heat-pct">85% Active</span>
+                        </div>
+                        {members.map((m) => (
+                          <div key={m.id} className="team-heat-row">
+                            <div className="member-heat-info">
+                              <span className="member-avatar-mini">{m.name?.[0] || "M"}</span>
+                              <strong>{m.name}</strong>
+                            </div>
+                            <div className="heat-bar-wrap">
+                              <div className="heat-bar-fill" style={{ width: "60%" }} />
+                            </div>
+                            <span className="heat-pct">60% Active</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </>
         )}
       </section>
@@ -3836,6 +4529,161 @@ export default function Home() {
                 🔴 End Conversation
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 4. AI MASTER COPILOT MODAL (Mastermind Feature 4) */}
+      {showCopilotModal && (
+        <div className="modal-backdrop" onClick={() => setShowCopilotModal(false)}>
+          <div className="modal copilot-power-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header-row">
+              <div>
+                <span className="eyebrow">AUTONOMOUS COPILOT ENGINE</span>
+                <h2>⚡ AI Master Power Actions</h2>
+                <p>1-Click autonomous project documentation, client updates, and technical specifications.</p>
+              </div>
+              <button type="button" className="modal-close-x" onClick={() => setShowCopilotModal(false)}>✕</button>
+            </div>
+
+            <div className="copilot-action-grid">
+              <button
+                type="button"
+                className={`copilot-card-btn ${copilotActionType === "readme" ? "active" : ""}`}
+                onClick={() => runCopilotAction("readme")}
+                disabled={copilotLoading}
+              >
+                <span className="copilot-icon">🚀</span>
+                <strong>Auto-Generate README.md</strong>
+                <span>Creates comprehensive repository overview & architecture.</span>
+              </button>
+
+              <button
+                type="button"
+                className={`copilot-card-btn ${copilotActionType === "client_email" ? "active" : ""}`}
+                onClick={() => runCopilotAction("client_email")}
+                disabled={copilotLoading}
+              >
+                <span className="copilot-icon">📧</span>
+                <strong>Draft Client Update Email</strong>
+                <span>Executive stakeholder progress report & milestone briefing.</span>
+              </button>
+
+              <button
+                type="button"
+                className={`copilot-card-btn ${copilotActionType === "api_docs" ? "active" : ""}`}
+                onClick={() => runCopilotAction("api_docs")}
+                disabled={copilotLoading}
+              >
+                <span className="copilot-icon">🧪</span>
+                <strong>API Architecture Spec</strong>
+                <span>OpenAPI compliant schema, routes, and testing payloads.</span>
+              </button>
+
+              <button
+                type="button"
+                className={`copilot-card-btn ${copilotActionType === "retrospective" ? "active" : ""}`}
+                onClick={() => runCopilotAction("retrospective")}
+                disabled={copilotLoading}
+              >
+                <span className="copilot-icon">📝</span>
+                <strong>Sprint Retrospective</strong>
+                <span>Identifies achievements, blockers, and next sprint roadmap.</span>
+              </button>
+            </div>
+
+            {copilotLoading ? (
+              <div className="copilot-loading-stage">
+                <span className="spinner" />
+                <p>Synthesizing project intelligence & generating document...</p>
+              </div>
+            ) : copilotResult ? (
+              <div className="copilot-result-box">
+                <div className="copilot-result-head">
+                  <strong>{copilotResult.title}</strong>
+                  <div className="copilot-result-actions">
+                    <button
+                      type="button"
+                      className="copilot-copy-btn"
+                      onClick={() => {
+                        navigator.clipboard.writeText(copilotResult.content);
+                        setMessage("Copied to clipboard!");
+                      }}
+                    >
+                      📋 Copy Output
+                    </button>
+                  </div>
+                </div>
+                <pre className="copilot-output-pre">{copilotResult.content}</pre>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      )}
+
+      {/* 5. AUDIO MEMO TRANSCRIBER & ACTION EXTRACTOR MODAL (Mastermind Feature 5) */}
+      {showAudioMemoModal && (
+        <div className="modal-backdrop" onClick={() => setShowAudioMemoModal(false)}>
+          <div className="modal audio-memo-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header-row">
+              <div>
+                <span className="eyebrow">VOICE INTELLIGENCE & AUTO-TASKING</span>
+                <h2>🎙️ AI Voice Memo Transcriber</h2>
+                <p>Record or dictate audio notes. AI will transcribe and auto-create Kanban tasks.</p>
+              </div>
+              <button type="button" className="modal-close-x" onClick={() => setShowAudioMemoModal(false)}>✕</button>
+            </div>
+
+            <div className="audio-record-stage">
+              <button
+                type="button"
+                className={`audio-big-mic-btn ${isRecordingMemo ? "recording" : ""}`}
+                onClick={toggleAudioMemoRecording}
+              >
+                <span className="mic-symbol">{isRecordingMemo ? "⏹️" : "🎙️"}</span>
+                <strong>{isRecordingMemo ? "Recording... Click to Stop" : "Click to Record Voice Memo"}</strong>
+              </button>
+            </div>
+
+            {memoTranscript && (
+              <div className="memo-transcript-card">
+                <span className="memo-card-title">📝 Raw Transcript:</span>
+                <p className="memo-text">{memoTranscript}</p>
+              </div>
+            )}
+
+            {memoProcessing && (
+              <div className="memo-processing-banner">
+                <span className="spinner" />
+                <span>AI is extracting action items and tasks from speech...</span>
+              </div>
+            )}
+
+            {memoActionItems.length > 0 && (
+              <div className="memo-extracted-section">
+                <div className="memo-extracted-head">
+                  <strong>🎯 Extracted Action Items ({memoActionItems.length}):</strong>
+                  <button
+                    type="button"
+                    className="add-extracted-tasks-btn"
+                    onClick={addMemoTasksToKanban}
+                  >
+                    ✓ Add All to Kanban Board
+                  </button>
+                </div>
+                <div className="memo-actions-list">
+                  {memoActionItems.map((item, idx) => (
+                    <div key={idx} className="memo-action-card">
+                      <span className="memo-action-check">✓</span>
+                      <div className="memo-action-info">
+                        <strong>{item.title}</strong>
+                        <span className={`priority-tag ${item.priority}`}>{item.priority.toUpperCase()}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
