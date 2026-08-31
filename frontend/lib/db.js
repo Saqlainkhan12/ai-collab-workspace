@@ -133,6 +133,22 @@ export async function ensureDbInitialized() {
       );
     `;
 
+    // 9. Tasks table (Kanban Board)
+    await sql`
+      CREATE TABLE IF NOT EXISTS tasks (
+        id SERIAL PRIMARY KEY,
+        project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE,
+        title VARCHAR(500) NOT NULL,
+        description TEXT,
+        status VARCHAR(30) DEFAULT 'todo',
+        priority VARCHAR(20) DEFAULT 'medium',
+        assignee_name VARCHAR(150),
+        source VARCHAR(50) DEFAULT 'manual',
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+
     isInitialized = true;
   } catch (error) {
     console.error("Database initialization error:", error);

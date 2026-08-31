@@ -6898,3 +6898,466 @@ select:focus-visible {
     transform: translateY(0) scale(1);
   }
 }
+
+/* ============================================================
+   NAV BADGES
+   ============================================================ */
+
+.nav-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  margin-left: auto;
+}
+
+.nav-badge.alert {
+  background: rgba(255, 104, 116, 0.2);
+  color: #ff858e;
+  border: 1px solid rgba(255, 104, 116, 0.3);
+}
+
+/* ============================================================
+   FEATURE 2: URL INGESTION & DOCUMENT TABS
+   ============================================================ */
+
+.doc-tabs-wrapper {
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.doc-tabs {
+  display: flex;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  width: fit-content;
+}
+
+.doc-tab-btn {
+  padding: 7px 16px;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.doc-tab-btn.active,
+.doc-tab-btn:hover {
+  background: rgba(128, 100, 255, 0.15);
+  color: #f2f6f9;
+}
+
+.doc-tab-btn.active {
+  background: var(--purple);
+  color: #fff;
+  box-shadow: 0 0 16px rgba(128, 100, 255, 0.3);
+}
+
+.url-ingest-form {
+  display: flex;
+  gap: 10px;
+  background: #0d1217;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(128, 100, 255, 0.3);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.url-ingest-form input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: #fff;
+  font-size: 13.5px;
+  outline: none;
+}
+
+.url-ingest-form input:focus {
+  border-color: var(--purple);
+  box-shadow: 0 0 0 2px rgba(128, 100, 255, 0.2);
+}
+
+.doc-list-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.doc-card-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: #0d1217;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  transition: all 0.15s ease;
+}
+
+.doc-card-item:hover {
+  border-color: rgba(128, 100, 255, 0.35);
+  transform: translateY(-2px);
+}
+
+.doc-card-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.doc-type-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 6px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #c5baff;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+}
+
+.doc-card-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.doc-card-titles strong {
+  font-size: 13.5px;
+  color: #f2f6f9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.doc-card-titles span {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.doc-delete-btn {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  transition: all 0.12s ease;
+}
+
+.doc-delete-btn:hover {
+  color: var(--danger);
+  background: rgba(255, 104, 116, 0.12);
+}
+
+/* ============================================================
+   FEATURE 3: TASKS & KANBAN BOARD
+   ============================================================ */
+
+.tasks-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ai-extract-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 16px;
+  background: linear-gradient(135deg, rgba(128, 100, 255, 0.2), rgba(32, 227, 154, 0.15));
+  border: 1px solid rgba(128, 100, 255, 0.4);
+  border-radius: 9px;
+  color: #d8ceff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 0 16px rgba(128, 100, 255, 0.15);
+}
+
+.ai-extract-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(128, 100, 255, 0.35), rgba(32, 227, 154, 0.25));
+  color: #fff;
+  border-color: var(--green);
+  transform: translateY(-1px);
+}
+
+.kanban-board {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin-top: 18px;
+}
+
+@media (max-width: 900px) {
+  .kanban-board {
+    grid-template-columns: 1fr;
+  }
+}
+
+.kanban-column {
+  background: #090d11;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 380px;
+}
+
+.kanban-column-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.col-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.col-title-group strong {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f2f6f9;
+}
+
+.col-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.col-dot.todo { background: #ffaa33; box-shadow: 0 0 8px #ffaa33; }
+.col-dot.in_progress { background: #35a7ff; box-shadow: 0 0 8px #35a7ff; }
+.col-dot.done { background: #20e39a; box-shadow: 0 0 8px #20e39a; }
+
+.col-count-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--muted);
+}
+
+.col-count-badge.in-prog { color: #85c8ff; background: rgba(53, 167, 255, 0.12); }
+.col-count-badge.done { color: #20e39a; background: rgba(32, 227, 154, 0.12); }
+
+.kanban-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+
+.kanban-empty-col {
+  padding: 30px 10px;
+  text-align: center;
+  color: var(--muted2);
+  font-size: 13px;
+  border: 1px dashed rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+}
+
+.kanban-task-card {
+  background: #0e141a;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+  transition: all 0.15s ease;
+}
+
+.kanban-task-card:hover {
+  border-color: rgba(128, 100, 255, 0.35);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
+}
+
+.task-card-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.task-priority-badge {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.task-priority-badge.high { background: rgba(255, 104, 116, 0.18); color: #ff858e; border: 1px solid rgba(255, 104, 116, 0.3); }
+.task-priority-badge.medium { background: rgba(255, 180, 50, 0.18); color: #ffca66; border: 1px solid rgba(255, 180, 50, 0.3); }
+.task-priority-badge.low { background: rgba(53, 167, 255, 0.18); color: #8ecbff; border: 1px solid rgba(53, 167, 255, 0.3); }
+
+.task-ai-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(128, 100, 255, 0.2);
+  color: #c5baff;
+  border: 1px solid rgba(128, 100, 255, 0.35);
+}
+
+.task-delete-btn {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: var(--muted2);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.task-delete-btn:hover {
+  color: var(--danger);
+  background: rgba(255, 104, 116, 0.15);
+}
+
+.task-title {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #f2f6f9;
+  line-height: 1.35;
+}
+
+.task-desc {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.task-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  gap: 6px;
+}
+
+.task-assignee {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.task-status-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.task-move-btn {
+  padding: 3px 8px;
+  font-size: 10.5px;
+  font-weight: 600;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.task-move-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.task-move-btn.in-prog:hover {
+  background: rgba(53, 167, 255, 0.2);
+  color: #85c8ff;
+  border-color: rgba(53, 167, 255, 0.4);
+}
+
+.task-move-btn.done:hover {
+  background: rgba(32, 227, 154, 0.2);
+  color: #20e39a;
+  border-color: rgba(32, 227, 154, 0.4);
+}
+
+.add-col-task-btn {
+  padding: 8px;
+  border-radius: 7px;
+  border: 1px dashed var(--border);
+  background: transparent;
+  color: var(--muted);
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.add-col-task-btn:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: #fff;
+  border-color: rgba(128, 100, 255, 0.4);
+}
+
+.modal-form-row {
+  display: flex;
+  gap: 12px;
+}
+
+.form-field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-field label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.form-field select {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: #fff;
+  font-size: 13px;
+  outline: none;
+}
+
+.form-field select option {
+  background: #0d1217;
+  color: #fff;
+}

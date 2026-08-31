@@ -31,6 +31,22 @@ export default function Home() {
 
   const [uploading, setUploading] = useState(false);
 
+  // TASKS (KANBAN) & URL INGESTION STATE
+  const [tasks, setTasks] = useState([]);
+  const [tasksLoading, setTasksLoading] = useState(false);
+  const [extractingTasks, setExtractingTasks] = useState(false);
+  const [showCreateTask, setShowCreateTask] = useState(false);
+  const [taskTitle, setTaskTitle] = useState("");
+  const [taskDesc, setTaskDesc] = useState("");
+  const [taskPriority, setTaskPriority] = useState("medium");
+  const [taskAssignee, setTaskAssignee] = useState("");
+  const [taskColumn, setTaskColumn] = useState("todo");
+
+  // URL INGESTION STATE
+  const [docTab, setDocTab] = useState("upload"); // "upload" | "url"
+  const [urlInput, setUrlInput] = useState("");
+  const [urlIngesting, setUrlIngesting] = useState(false);
+
   // MOBILE MENU STATE
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -277,6 +293,213 @@ export default function Home() {
     }
   }
 
+  async function ingestUrl(event) {
+    event?.preventDefault();
+    if (!urlInput.trim() || !activeProject) return;
+
+    try {
+      setUrlIngesting(true);
+      setMessage("Website content fetch aur index ho raha hai...");
+
+      const response = await fetch(
+        `${API}/projects/${activeProject.id}/documents/url`,
+        {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ url: urlInput.trim() }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "URL ingestion failed");
+      }
+
+      const data = await response.json();
+      setMessage(`Website indexed: "${data.filename}" (${data.chunks} chunks).`);
+      setUrlInput("");
+      await loadDocuments();
+    } catch (error) {
+      console.error("URL Ingestion Error:", error);
+      setMessage(`URL import failed: ${error.message}`);
+    } finally {
+      setUrlIngesting(false);
+    }
+  }
+
+  async function deleteDocument(docId) {
+    if (!activeProject) return;
+    const confirmed = window.confirm("Is document / URL ko delete karna chahte hain?");
+    if (!confirmed) return;
+
+    try {
+      setDocuments((current) => current.filter((d) => d.id !== docId));
+
+      const response = await fetch(
+        `${API}/projects/${activeProject.id}/documents/${docId}`,
+        {
+          method: "DELETE",
+          headers,
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      setMessage("Document delete ho gaya.");
+    } catch (error) {
+      console.error(error);
+      setMessage("Document delete nahi ho saka.");
+      await loadDocuments();
+    }
+  }
+
+  // =========================
+  // TASK FUNCTIONS (KANBAN)
+  // =========================
+
+  async function loadTasks() {
+    if (!activeProject) return;
+
+    try {
+      setTasksLoading(true);
+      const response = await fetch(
+        `${API}/projects/${activeProject.id}/tasks`,
+        { headers }
+      );
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      setTasks(await response.json());
+    } catch (error) {
+      console.error("Load tasks error:", error);
+    } finally {
+      setTasksLoading(false);
+    }
+  }
+
+  async function createTask(event) {
+    event?.preventDefault();
+    if (!taskTitle.trim() || !activeProject) return;
+
+    try {
+      setMessage("Task create ho raha hai...");
+
+      const response = await fetch(
+        `${API}/projects/${activeProject.id}/tasks`,
+        {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            title: taskTitle.trim(),
+            description: taskDesc.trim(),
+            priority: taskPriority,
+            assignee_name: taskAssignee.trim() || "Team",
+            status: taskColumn,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      const newTask = await response.json();
+      setTasks((current) => [newTask, ...current]);
+      setTaskTitle("");
+      setTaskDesc("");
+      setTaskAssignee("");
+      setShowCreateTask(false);
+      setMessage("Task create ho gaya!");
+    } catch (error) {
+      console.error(error);
+      setMessage("Task create nahi ho saka.");
+    }
+  }
+
+  async function updateTaskStatus(taskId, newStatus) {
+    if (!activeProject) return;
+
+    try {
+      setTasks((current) =>
+        current.map((t) =>
+          t.id === taskId ? { ...t, status: newStatus } : t
+        )
+      );
+
+      await fetch(
+        `${API}/projects/${activeProject.id}/tasks/${taskId}`,
+        {
+          method: "PATCH",
+          headers,
+          body: JSON.stringify({ status: newStatus }),
+        }
+      );
+    } catch (error) {
+      console.error(error);
+      await loadTasks();
+    }
+  }
+
+  async function deleteTask(taskId) {
+    if (!activeProject) return;
+
+    try {
+      setTasks((current) => current.filter((t) => t.id !== taskId));
+
+      await fetch(
+        `${API}/projects/${activeProject.id}/tasks/${taskId}`,
+        {
+          method: "DELETE",
+          headers,
+        }
+      );
+
+      setMessage("Task delete ho gaya.");
+    } catch (error) {
+      console.error(error);
+      await loadTasks();
+    }
+  }
+
+  async function extractTasksWithAI() {
+    if (!activeProject) return;
+
+    try {
+      setExtractingTasks(true);
+      setMessage("AI conversation se tasks analyze aur extract kar raha hai...");
+
+      const response = await fetch(
+        `${API}/projects/${activeProject.id}/tasks/extract`,
+        {
+          method: "POST",
+          headers,
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      const data = await response.json();
+
+      if (data.tasks && data.tasks.length > 0) {
+        setMessage(`AI ne ${data.tasks.length} task(s) extract kar liye!`);
+        await loadTasks();
+      } else {
+        setMessage(data.message || "Koi naye tasks extract nahi huay.");
+      }
+    } catch (error) {
+      console.error(error);
+      setMessage("AI task extraction failed.");
+    } finally {
+      setExtractingTasks(false);
+    }
+  }
+
   // =========================
   // CHAT FUNCTIONS
   // =========================
@@ -414,6 +637,10 @@ export default function Home() {
     if (nextView === "team") {
       loadMembers();
     }
+
+    if (nextView === "tasks") {
+      loadTasks();
+    }
   }
 
   useEffect(() => {
@@ -425,6 +652,7 @@ export default function Home() {
       loadDocuments();
       loadConversations();
       loadMembers();
+      loadTasks();
       setChatMessages([]);
       setActiveConversation(null);
     }
@@ -450,6 +678,29 @@ export default function Home() {
       },
     },
     {
+      id: "action-tasks",
+      category: "ACTIONS",
+      icon: "✓",
+      title: "Open Task Board (Kanban)",
+      subtitle: `${tasks.length} tasks in project`,
+      perform: () => {
+        selectView("tasks");
+        setCommandPaletteOpen(false);
+      },
+    },
+    {
+      id: "action-extract-tasks",
+      category: "ACTIONS",
+      icon: "✨",
+      title: "Extract Tasks from Chat with AI",
+      subtitle: "Auto-generate actionable to-do list",
+      perform: () => {
+        selectView("tasks");
+        extractTasksWithAI();
+        setCommandPaletteOpen(false);
+      },
+    },
+    {
       id: "action-create",
       category: "ACTIONS",
       icon: "+",
@@ -457,6 +708,18 @@ export default function Home() {
       subtitle: "Set up a new workspace",
       perform: () => {
         setShowCreate(true);
+        setCommandPaletteOpen(false);
+      },
+    },
+    {
+      id: "action-create-task",
+      category: "ACTIONS",
+      icon: "+",
+      title: "Add New Task / To-Do",
+      subtitle: "Create a task in Kanban board",
+      perform: () => {
+        selectView("tasks");
+        setShowCreateTask(true);
         setCommandPaletteOpen(false);
       },
     },
@@ -497,8 +760,8 @@ export default function Home() {
       id: "action-docs",
       category: "ACTIONS",
       icon: "◇",
-      title: "Knowledge & Documents",
-      subtitle: `${documents.length} files indexed`,
+      title: "Knowledge Base & Web URLs",
+      subtitle: `${documents.length} files and URLs indexed`,
       perform: () => {
         selectView("documents");
         setCommandPaletteOpen(false);
@@ -571,11 +834,31 @@ export default function Home() {
     .map((d) => ({
       id: `doc-${d.id}`,
       category: "DOCUMENTS",
-      icon: "◇",
+      icon: d.file_type === "url" ? "🌐" : "◇",
       title: d.filename,
-      subtitle: `${d.chunk_count || 0} chunks`,
+      subtitle: d.file_type === "url" ? "Webpage" : "Uploaded File",
       perform: () => {
         selectView("documents");
+        setCommandPaletteOpen(false);
+      },
+    }));
+
+  const taskItems = tasks
+    .filter(
+      (t) =>
+        !query ||
+        t.title.toLowerCase().includes(query) ||
+        (t.description && t.description.toLowerCase().includes(query)) ||
+        (t.assignee_name && t.assignee_name.toLowerCase().includes(query))
+    )
+    .map((t) => ({
+      id: `task-${t.id}`,
+      category: "TASKS",
+      icon: t.status === "done" ? "✅" : t.status === "in_progress" ? "⚡" : "📌",
+      title: t.title,
+      subtitle: `${t.status.toUpperCase()} · ${t.priority.toUpperCase()} · ${t.assignee_name || "Team"}`,
+      perform: () => {
+        selectView("tasks");
         setCommandPaletteOpen(false);
       },
     }));
@@ -603,9 +886,74 @@ export default function Home() {
     ...quickActions,
     ...projectItems,
     ...conversationItems,
+    ...taskItems,
     ...documentItems,
     ...memberItems,
   ];
+
+  function renderTaskCard(task) {
+    return (
+      <div className="kanban-task-card" key={task.id}>
+        <div className="task-card-header">
+          <span className={`task-priority-badge ${task.priority}`}>
+            {task.priority?.toUpperCase()}
+          </span>
+          {task.source === "ai_extracted" && (
+            <span className="task-ai-badge">✨ AI EXTRACTED</span>
+          )}
+          <button
+            type="button"
+            className="task-delete-btn"
+            onClick={() => deleteTask(task.id)}
+            title="Delete task"
+          >
+            ✕
+          </button>
+        </div>
+
+        <h4 className="task-title">{task.title}</h4>
+        {task.description && (
+          <p className="task-desc">{task.description}</p>
+        )}
+
+        <div className="task-card-footer">
+          <span className="task-assignee">👤 {task.assignee_name || "Team"}</span>
+          <div className="task-status-actions">
+            {task.status !== "todo" && (
+              <button
+                type="button"
+                className="task-move-btn"
+                onClick={() => updateTaskStatus(task.id, "todo")}
+                title="Move to To Do"
+              >
+                ← Todo
+              </button>
+            )}
+            {task.status !== "in_progress" && (
+              <button
+                type="button"
+                className="task-move-btn in-prog"
+                onClick={() => updateTaskStatus(task.id, "in_progress")}
+                title="Move to In Progress"
+              >
+                ⚡ In Progress
+              </button>
+            )}
+            {task.status !== "done" && (
+              <button
+                type="button"
+                className="task-move-btn done"
+                onClick={() => updateTaskStatus(task.id, "done")}
+                title="Mark as Done"
+              >
+                ✓ Done
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <main className="workspace">
@@ -727,7 +1075,22 @@ export default function Home() {
             }`}
             onClick={() => selectView("documents")}
           >
-            ◇ <span>Documents</span>
+            ◇ <span>Documents & URLs</span>
+            {documents.length > 0 && (
+              <span className="nav-badge">{documents.length}</span>
+            )}
+          </button>
+
+          <button
+            className={`nav-item ${
+              view === "tasks" ? "active" : ""
+            }`}
+            onClick={() => selectView("tasks")}
+          >
+            ✓ <span>Tasks / Board</span>
+            {tasks.filter((t) => t.status !== "done").length > 0 && (
+              <span className="nav-badge alert">{tasks.filter((t) => t.status !== "done").length}</span>
+            )}
           </button>
 
           <button
@@ -762,7 +1125,8 @@ export default function Home() {
             <h1>
               {view === "dashboard" && "Your Projects"}
               {view === "projects" && "Projects"}
-              {view === "documents" && "Documents"}
+              {view === "documents" && "Knowledge Base & URLs"}
+              {view === "tasks" && "Project Tasks & Kanban"}
               {view === "conversations" && "Conversations"}
               {view === "chat" &&
                 (activeProject?.name || "AI Chat")}
@@ -791,14 +1155,39 @@ export default function Home() {
               <span className="search-kbd">Ctrl K</span>
             </button>
 
-            {view !== "chat" ? (
+            {view === "tasks" && project && (
+              <>
+                <button
+                  type="button"
+                  className="ai-extract-btn"
+                  onClick={extractTasksWithAI}
+                  disabled={extractingTasks}
+                >
+                  {extractingTasks ? "EXTRACTING..." : "✨ AI Extract Tasks"}
+                </button>
+                <button
+                  type="button"
+                  className="create-btn"
+                  onClick={() => {
+                    setTaskColumn("todo");
+                    setShowCreateTask(true);
+                  }}
+                >
+                  + New Task
+                </button>
+              </>
+            )}
+
+            {view !== "chat" && view !== "tasks" && (
               <button
                 className="create-btn"
                 onClick={() => setShowCreate(true)}
               >
                 + New Project
               </button>
-            ) : (
+            )}
+
+            {view === "chat" && (
               <button
                 className="create-btn"
                 onClick={startNewConversation}
@@ -832,19 +1221,19 @@ export default function Home() {
                     <strong>{projects.length}</strong>
                   </div>
 
-                  <div className="stat">
-                    <span>DOCUMENTS</span>
+                  <div className="stat" onClick={() => selectView("documents")} style={{ cursor: "pointer" }}>
+                    <span>DOCUMENTS & URLS</span>
                     <strong>{documents.length}</strong>
                   </div>
 
-                  <div className="stat">
+                  <div className="stat" onClick={() => selectView("conversations")} style={{ cursor: "pointer" }}>
                     <span>CONVERSATIONS</span>
                     <strong>{conversations.length}</strong>
                   </div>
 
-                  <div className="stat">
-                    <span>ACTIVE SESSIONS</span>
-                    <strong>01</strong>
+                  <div className="stat" onClick={() => selectView("tasks")} style={{ cursor: "pointer" }}>
+                    <span>PENDING TASKS</span>
+                    <strong>{tasks.filter((t) => t.status !== "done").length}</strong>
                   </div>
                 </div>
 
@@ -1048,7 +1437,7 @@ export default function Home() {
               </div>
             )}
 
-            {/* DOCUMENTS */}
+            {/* DOCUMENTS & URL INGESTION */}
 
             {view === "documents" && (
               <div className="data-section">
@@ -1063,9 +1452,10 @@ export default function Home() {
                         ? project.name
                         : "Select a project"}
                     </h2>
+                    <p>Build your workspace AI memory with uploaded documents and live web pages.</p>
                   </div>
 
-                  {project && (
+                  {project && docTab === "upload" && (
                     <label className="create-btn upload-label">
                       {uploading
                         ? "INDEXING..."
@@ -1081,33 +1471,89 @@ export default function Home() {
                   )}
                 </div>
 
+                {project && (
+                  <div className="doc-tabs-wrapper">
+                    <div className="doc-tabs">
+                      <button
+                        type="button"
+                        className={`doc-tab-btn ${docTab === "upload" ? "active" : ""}`}
+                        onClick={() => setDocTab("upload")}
+                      >
+                        📁 File Upload
+                      </button>
+                      <button
+                        type="button"
+                        className={`doc-tab-btn ${docTab === "url" ? "active" : ""}`}
+                        onClick={() => setDocTab("url")}
+                      >
+                        🌐 Webpage URL Ingestion
+                      </button>
+                    </div>
+
+                    {docTab === "url" && (
+                      <form className="url-ingest-form" onSubmit={ingestUrl}>
+                        <input
+                          type="url"
+                          placeholder="https://example.com/documentation or blog link..."
+                          value={urlInput}
+                          onChange={(e) => setUrlInput(e.target.value)}
+                          disabled={urlIngesting}
+                          required
+                        />
+                        <button
+                          type="submit"
+                          className="create-btn"
+                          disabled={urlIngesting || !urlInput.trim()}
+                        >
+                          {urlIngesting ? "FETCHING & INDEXING..." : "🌐 Fetch & Index Webpage"}
+                        </button>
+                      </form>
+                    )}
+                  </div>
+                )}
+
                 {!project ? (
                   <div className="empty-state">
                     Select a project first.
                   </div>
                 ) : documents.length === 0 ? (
                   <div className="empty-state">
-                    <h2>No documents</h2>
+                    <h2>No documents or URLs</h2>
 
                     <p>
-                      Upload a document to build your
+                      Upload a file or enter a web page URL to build your
                       project knowledge base.
                     </p>
                   </div>
                 ) : (
-                  <div className="list-grid">
+                  <div className="doc-list-grid">
                     {documents.map((doc) => (
                       <div
-                        className="list-card"
+                        className="doc-card-item"
                         key={doc.id}
                       >
-                        <strong>
-                          {doc.filename}
-                        </strong>
+                        <div className="doc-card-info">
+                          <span className="doc-type-badge">
+                            {doc.file_type === "url" ? "🌐 WEB" : "📄 FILE"}
+                          </span>
+                          <div className="doc-card-titles">
+                            <strong>{doc.filename}</strong>
+                            <span>
+                              {doc.file_type === "url" ? "Web Ingestion" : "File"} · {doc.status?.toUpperCase()}
+                            </span>
+                          </div>
+                        </div>
 
-                        <span>
-                          {doc.status?.toUpperCase()}
-                        </span>
+                        <div className="doc-card-actions">
+                          <button
+                            type="button"
+                            className="doc-delete-btn"
+                            onClick={() => deleteDocument(doc.id)}
+                            title="Delete item"
+                          >
+                            🗑
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -1411,6 +1857,165 @@ export default function Home() {
                 )}
               </div>
             )}
+
+            {/* TASKS & KANBAN BOARD */}
+
+            {view === "tasks" && (
+              <div className="data-section tasks-section">
+                <div className="section-head">
+                  <div>
+                    <span className="eyebrow">
+                      WORKFLOW & KANBAN
+                    </span>
+
+                    <h2>
+                      {project ? `${project.name} Tasks` : "Project Tasks"}
+                    </h2>
+                    <p>Track team to-dos and auto-extract actionable tasks from chat conversations.</p>
+                  </div>
+
+                  <div className="tasks-head-actions">
+                    <button
+                      type="button"
+                      className="ai-extract-btn"
+                      onClick={extractTasksWithAI}
+                      disabled={extractingTasks || !project}
+                      title="AI will analyze recent chat discussions and create tasks"
+                    >
+                      {extractingTasks ? "EXTRACTING..." : "✨ AI Extract from Chat"}
+                    </button>
+
+                    <button
+                      type="button"
+                      className="create-btn"
+                      onClick={() => {
+                        setTaskColumn("todo");
+                        setShowCreateTask(true);
+                      }}
+                      disabled={!project}
+                    >
+                      + New Task
+                    </button>
+                  </div>
+                </div>
+
+                {!project ? (
+                  <div className="empty-state">
+                    Select a project first.
+                  </div>
+                ) : (
+                  <div className="kanban-board">
+                    {/* COLUMN 1: TO DO */}
+                    <div className="kanban-column">
+                      <div className="kanban-column-head">
+                        <div className="col-title-group">
+                          <span className="col-dot todo" />
+                          <strong>To Do</strong>
+                        </div>
+                        <span className="col-count-badge">
+                          {tasks.filter((t) => t.status === "todo").length}
+                        </span>
+                      </div>
+
+                      <div className="kanban-card-list">
+                        {tasks.filter((t) => t.status === "todo").length === 0 ? (
+                          <div className="kanban-empty-col">
+                            No tasks to do
+                          </div>
+                        ) : (
+                          tasks
+                            .filter((t) => t.status === "todo")
+                            .map((task) => renderTaskCard(task))
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        className="add-col-task-btn"
+                        onClick={() => {
+                          setTaskColumn("todo");
+                          setShowCreateTask(true);
+                        }}
+                      >
+                        + Add task
+                      </button>
+                    </div>
+
+                    {/* COLUMN 2: IN PROGRESS */}
+                    <div className="kanban-column">
+                      <div className="kanban-column-head">
+                        <div className="col-title-group">
+                          <span className="col-dot in_progress" />
+                          <strong>In Progress</strong>
+                        </div>
+                        <span className="col-count-badge in-prog">
+                          {tasks.filter((t) => t.status === "in_progress").length}
+                        </span>
+                      </div>
+
+                      <div className="kanban-card-list">
+                        {tasks.filter((t) => t.status === "in_progress").length === 0 ? (
+                          <div className="kanban-empty-col">
+                            No tasks in progress
+                          </div>
+                        ) : (
+                          tasks
+                            .filter((t) => t.status === "in_progress")
+                            .map((task) => renderTaskCard(task))
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        className="add-col-task-btn"
+                        onClick={() => {
+                          setTaskColumn("in_progress");
+                          setShowCreateTask(true);
+                        }}
+                      >
+                        + Add task
+                      </button>
+                    </div>
+
+                    {/* COLUMN 3: DONE */}
+                    <div className="kanban-column">
+                      <div className="kanban-column-head">
+                        <div className="col-title-group">
+                          <span className="col-dot done" />
+                          <strong>Completed</strong>
+                        </div>
+                        <span className="col-count-badge done">
+                          {tasks.filter((t) => t.status === "done").length}
+                        </span>
+                      </div>
+
+                      <div className="kanban-card-list">
+                        {tasks.filter((t) => t.status === "done").length === 0 ? (
+                          <div className="kanban-empty-col">
+                            No completed tasks
+                          </div>
+                        ) : (
+                          tasks
+                            .filter((t) => t.status === "done")
+                            .map((task) => renderTaskCard(task))
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        className="add-col-task-btn"
+                        onClick={() => {
+                          setTaskColumn("done");
+                          setShowCreateTask(true);
+                        }}
+                      >
+                        + Add task
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </>
         )}
       </section>
@@ -1468,6 +2073,98 @@ export default function Home() {
 
               <button type="submit">
                 CREATE PROJECT
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* CREATE TASK MODAL */}
+
+      {showCreateTask && (
+        <div
+          className="modal-backdrop"
+          onClick={() => setShowCreateTask(false)}
+        >
+          <form
+            className="modal"
+            onClick={(event) =>
+              event.stopPropagation()
+            }
+            onSubmit={createTask}
+          >
+            <span className="eyebrow">
+              KANBAN BOARD
+            </span>
+
+            <h2>Create New Task</h2>
+
+            <input
+              value={taskTitle}
+              onChange={(event) =>
+                setTaskTitle(event.target.value)
+              }
+              placeholder="Task title (e.g. Build API endpoint)"
+              autoFocus
+              required
+            />
+
+            <textarea
+              value={taskDesc}
+              onChange={(event) =>
+                setTaskDesc(event.target.value)
+              }
+              placeholder="Task description (optional)"
+              rows={3}
+            />
+
+            <div className="modal-form-row">
+              <div className="form-field">
+                <label>Priority</label>
+                <select
+                  value={taskPriority}
+                  onChange={(e) => setTaskPriority(e.target.value)}
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </div>
+
+              <div className="form-field">
+                <label>Column</label>
+                <select
+                  value={taskColumn}
+                  onChange={(e) => setTaskColumn(e.target.value)}
+                >
+                  <option value="todo">To Do</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="done">Done</option>
+                </select>
+              </div>
+            </div>
+
+            <input
+              value={taskAssignee}
+              onChange={(event) =>
+                setTaskAssignee(event.target.value)
+              }
+              placeholder="Assignee (e.g. Ali, Ahmed, Team)"
+            />
+
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="secondary"
+                onClick={() =>
+                  setShowCreateTask(false)
+                }
+              >
+                CANCEL
+              </button>
+
+              <button type="submit">
+                CREATE TASK
               </button>
             </div>
           </form>
