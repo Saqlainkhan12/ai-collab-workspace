@@ -62,30 +62,37 @@ export default function Home() {
   const [artifactTab, setArtifactTab] = useState("preview"); // "preview" | "code"
   const [artifactDevice, setArtifactDevice] = useState("desktop"); // "desktop" | "mobile"
 
-  // THEME COLOR SWITCHER STATE (Short Right Corner Button)
-  const [theme, setTheme] = useState("purple");
-  const [themeMenuOpen, setThemeMenuOpen] = useState(false);
+  // THEME COLOR SWITCHER STATE (Direct 1-Click Color Bar)
+  const [theme, setTheme] = useState("green");
 
   const themes = [
-    { id: "purple", name: "Neon Purple", color: "#8064ff", bg: "#070a0d" },
-    { id: "green", name: "ChatGPT Emerald", color: "#10a37f", bg: "#070d0a" },
-    { id: "blue", name: "Cyber Blue", color: "#3b82f6", bg: "#070a12" },
-    { id: "amber", name: "Sunset Amber", color: "#f59e0b", bg: "#0c0906" },
+    { id: "green", name: "ChatGPT Mint", color: "#10a37f", desc: "OpenAI Emerald" },
+    { id: "blue", name: "Linear Blue", color: "#3b82f6", desc: "Cyber Electric" },
+    { id: "purple", name: "Obsidian Violet", color: "#8b5cf6", desc: "Deep Luxe" },
+    { id: "titanium", name: "Titanium Slate", color: "#e2e8f0", desc: "Clean Minimalist" },
   ];
 
   useEffect(() => {
     try {
       const savedTheme = localStorage.getItem("collab_theme");
-      if (savedTheme && ["purple", "green", "blue", "amber"].includes(savedTheme)) {
+      if (savedTheme && ["green", "blue", "purple", "titanium"].includes(savedTheme)) {
         setTheme(savedTheme);
         document.documentElement.setAttribute("data-theme", savedTheme);
       } else {
-        document.documentElement.setAttribute("data-theme", "purple");
+        setTheme("green");
+        document.documentElement.setAttribute("data-theme", "green");
       }
     } catch (e) {
       console.error(e);
     }
   }, []);
+
+  useEffect(() => {
+    if (message) {
+      const t = setTimeout(() => setMessage(""), 3500);
+      return () => clearTimeout(t);
+    }
+  }, [message]);
 
   function changeTheme(newTheme) {
     setTheme(newTheme);
@@ -95,8 +102,8 @@ export default function Home() {
     } catch (e) {
       console.error(e);
     }
-    setThemeMenuOpen(false);
-    setMessage(`Theme changed to ${newTheme.toUpperCase()}!`);
+    const tObj = themes.find((t) => t.id === newTheme);
+    setMessage(`Theme changed: ${tObj?.name || newTheme}`);
   }
 
   // COMMAND PALETTE STATE (Ctrl+K)
@@ -247,8 +254,7 @@ export default function Home() {
 
       setDocuments(await response.json());
     } catch (error) {
-      console.error(error);
-      setMessage("Documents load nahi ho sake.");
+      console.error("Documents fetch:", error);
     }
   }
 
@@ -266,11 +272,9 @@ export default function Home() {
       }
 
       const data = await response.json();
-
       setConversations(data);
     } catch (error) {
-      console.error(error);
-      setMessage("Conversations load nahi ho sake.");
+      console.error("Conversations fetch:", error);
     }
   }
 
@@ -289,8 +293,7 @@ export default function Home() {
 
       setMembers(await response.json());
     } catch (error) {
-      console.error(error);
-      setMessage("Team load nahi ho saki.");
+      console.error("Members fetch:", error);
     }
   }
 
@@ -1175,28 +1178,21 @@ export default function Home() {
         </div>
 
         <div className="mobile-header-actions">
-          {/* MOBILE SHORT THEME BUTTON */}
-          <button
-            type="button"
-            className="mobile-theme-btn"
-            onClick={() => setThemeMenuOpen((prev) => !prev)}
-            title="Theme Palette"
-            aria-label="Theme Color"
-          >
-            <span
-              className="theme-dot-indicator"
-              style={{
-                background:
-                  theme === "green"
-                    ? "#10a37f"
-                    : theme === "blue"
-                    ? "#3b82f6"
-                    : theme === "amber"
-                    ? "#f59e0b"
-                    : "#8064ff",
-              }}
-            />
-          </button>
+          {/* MOBILE QUICK THEME SELECTOR */}
+          <div className="mobile-theme-dots">
+            {themes.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                className={`mobile-theme-dot ${theme === t.id ? "active" : ""}`}
+                onClick={() => changeTheme(t.id)}
+                title={t.name}
+                aria-label={t.name}
+              >
+                <span style={{ background: t.color }} />
+              </button>
+            ))}
+          </div>
 
           <button
             type="button"
@@ -1373,61 +1369,23 @@ export default function Home() {
               <span className="search-kbd">Ctrl K</span>
             </button>
 
-            {/* SHORT RIGHT CORNER THEME COLOR SWITCHER */}
-            <div className="theme-switcher-container">
-              <button
-                type="button"
-                className="theme-pill-btn"
-                onClick={() => setThemeMenuOpen((prev) => !prev)}
-                title="Change Color Theme"
-              >
-                <span
-                  className="theme-active-dot"
-                  style={{
-                    background:
-                      theme === "green"
-                        ? "#10a37f"
-                        : theme === "blue"
-                        ? "#3b82f6"
-                        : theme === "amber"
-                        ? "#f59e0b"
-                        : "#8064ff",
-                  }}
-                />
-                <span className="theme-pill-icon">🎨</span>
-              </button>
-
-              {themeMenuOpen && (
-                <div className="theme-dropdown-menu" onClick={(e) => e.stopPropagation()}>
-                  <div className="theme-dropdown-header">
-                    <span>THEME ACCENT</span>
-                    <button
-                      type="button"
-                      className="theme-dropdown-close"
-                      onClick={() => setThemeMenuOpen(false)}
-                    >
-                      ✕
-                    </button>
-                  </div>
-                  <div className="theme-options-grid">
-                    {themes.map((t) => (
-                      <button
-                        key={t.id}
-                        type="button"
-                        className={`theme-option-btn ${theme === t.id ? "active" : ""}`}
-                        onClick={() => changeTheme(t.id)}
-                      >
-                        <span
-                          className="theme-preview-bubble"
-                          style={{ background: t.color }}
-                        />
-                        <span className="theme-option-label">{t.name}</span>
-                        {theme === t.id && <span className="theme-check-icon">✓</span>}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+            {/* DIRECT VISIBLE 4-COLOR THEME SWITCHER BAR */}
+            <div className="theme-pill-bar" title="Select workspace accent theme">
+              <span className="theme-pill-label">🎨 THEME</span>
+              <div className="theme-dots-wrap">
+                {themes.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    className={`theme-circle-btn ${theme === t.id ? "active" : ""}`}
+                    onClick={() => changeTheme(t.id)}
+                    title={`${t.name} — ${t.desc}`}
+                    aria-label={t.name}
+                  >
+                    <span className="theme-swatch" style={{ background: t.color }} />
+                  </button>
+                ))}
+              </div>
             </div>
 
             {view === "tasks" && project && (
@@ -1541,26 +1499,13 @@ export default function Home() {
                           setView("dashboard");
                         }}
                       >
-                        <div
-                          className="project-glow"
-                          style={{
-                            background:
-                              index % 3 === 0
-                                ? "#7c5cff"
-                                : index % 3 === 1
-                                ? "#16d9a7"
-                                : "#28a9ff",
-                          }}
-                        />
-
                         <div className="project-card-top">
                           <span className="project-icon">
                             ✦
                           </span>
 
-                          <span>
-                            PROJECT{" "}
-                            {String(index + 1).padStart(2, "0")}
+                          <span className="project-num-tag">
+                            WORKSPACE {String(index + 1).padStart(2, "0")}
                           </span>
                         </div>
 
@@ -1574,8 +1519,8 @@ export default function Home() {
                         </div>
 
                         <div className="project-meta">
-                          <span>WORKSPACE</span>
-                          <span>AI</span>
+                          <span>KNOWLEDGE</span>
+                          <span>AI CHAT</span>
                           <span>ACTIVE</span>
                         </div>
                       </button>
@@ -1588,12 +1533,7 @@ export default function Home() {
                         ACTIVE PROJECT
                       </span>
 
-                      <div
-                        className="panel-icon"
-                        style={{
-                          background: "#7c5cff",
-                        }}
-                      >
+                      <div className="panel-icon">
                         ✦
                       </div>
 
