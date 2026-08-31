@@ -704,6 +704,174 @@ nav {
 }
 
 /* ============================================================
+   PROJECTS COLLECTION & LIST CARDS (ALL PROJECTS VIEW)
+   ============================================================ */
+
+.projects-collection-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.project-manage-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: all 0.15s ease;
+}
+
+.project-manage-card:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25), 0 0 16px var(--primary-glow);
+}
+
+.project-manage-card.active-selected {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px var(--primary), 0 0 20px var(--primary-glow);
+}
+
+.project-manage-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.project-manage-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--primary-subtle);
+  border: 1px solid var(--primary);
+  color: var(--primary);
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+}
+
+.project-manage-tags {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.active-badge {
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--primary);
+  color: #fff;
+}
+
+.project-manage-body h3 {
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.project-manage-body p {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.project-manage-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  margin-top: auto;
+}
+
+.project-action-pill {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--panel2);
+  color: var(--text);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.project-action-pill:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.project-action-pill.primary {
+  background: var(--primary-subtle);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.project-action-pill.primary:hover {
+  background: var(--primary);
+  color: #fff;
+}
+
+.project-action-pill.delete {
+  margin-left: auto;
+  color: var(--muted);
+}
+
+.project-action-pill.delete:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* LIST GRID & CARD FALLBACK */
+.list-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.list-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  padding: 14px 16px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.list-card:hover {
+  border-color: var(--primary);
+  background: var(--panel2);
+  transform: translateY(-2px);
+}
+
+.list-card strong {
+  display: block;
+  font-size: 14px;
+  margin-bottom: 4px;
+  color: var(--text);
+}
+
+.list-card span {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* ============================================================
    7. DOCUMENTS & URL INGESTION (FEATURE 2)
    ============================================================ */
 

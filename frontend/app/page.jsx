@@ -1600,7 +1600,7 @@ export default function Home() {
               </>
             )}
 
-            {/* PROJECTS */}
+            {/* PROJECTS VIEW */}
 
             {view === "projects" && (
               <div className="data-section">
@@ -1610,16 +1610,26 @@ export default function Home() {
                       WORKSPACE MANAGEMENT
                     </span>
 
-                    <h2>All Projects</h2>
+                    <h2>All Projects ({projects.length})</h2>
+                    <p>Manage your collaborative workspaces, documents, tasks and AI chat sessions.</p>
                   </div>
+
+                  <button
+                    type="button"
+                    className="create-btn"
+                    onClick={() => setShowCreate(true)}
+                  >
+                    + New Project
+                  </button>
                 </div>
 
                 {projects.length === 0 ? (
                   <div className="empty-state">
+                    <div className="empty-state-icon">◈</div>
                     <h2>No projects yet</h2>
 
                     <p>
-                      Create your first project.
+                      Create your first AI workspace to get started.
                     </p>
 
                     <button
@@ -1632,23 +1642,94 @@ export default function Home() {
                     </button>
                   </div>
                 ) : (
-                  <div className="list-grid">
+                  <div className="projects-collection-grid">
                     {projects.map((item) => (
-                      <button
-                        className="list-card"
+                      <div
                         key={item.id}
-                        onClick={() => {
-                          setActiveProject(item);
-                          setView("dashboard");
-                        }}
+                        className={`project-manage-card ${
+                          project?.id === item.id
+                            ? "active-selected"
+                            : ""
+                        }`}
                       >
-                        <strong>{item.name}</strong>
+                        <div className="project-manage-top">
+                          <div className="project-manage-icon">✦</div>
+                          <div className="project-manage-tags">
+                            <span className="project-num-tag">
+                              WORKSPACE #{item.id}
+                            </span>
+                            {project?.id === item.id && (
+                              <span className="active-badge">ACTIVE</span>
+                            )}
+                          </div>
+                        </div>
 
-                        <span>
-                          {item.description ||
-                            "AI workspace"}
-                        </span>
-                      </button>
+                        <div className="project-manage-body">
+                          <h3>{item.name}</h3>
+
+                          <p>
+                            {item.description ||
+                              "Collaborative AI project workspace for team knowledge & tasks."}
+                          </p>
+                        </div>
+
+                        <div className="project-manage-actions">
+                          <button
+                            type="button"
+                            className="project-action-pill primary"
+                            onClick={() => {
+                              setActiveProject(item);
+                              setView("chat");
+                            }}
+                            title="Open AI Chat for this project"
+                          >
+                            💬 Chat
+                          </button>
+                          <button
+                            type="button"
+                            className="project-action-pill"
+                            onClick={() => {
+                              setActiveProject(item);
+                              setView("tasks");
+                            }}
+                            title="View Kanban Tasks"
+                          >
+                            ✓ Tasks
+                          </button>
+                          <button
+                            type="button"
+                            className="project-action-pill"
+                            onClick={() => {
+                              setActiveProject(item);
+                              setView("documents");
+                            }}
+                            title="View Knowledge Base & URLs"
+                          >
+                            📁 Docs
+                          </button>
+                          <button
+                            type="button"
+                            className="project-action-pill delete"
+                            onClick={async () => {
+                              if (window.confirm(`Delete project "${item.name}"?`)) {
+                                try {
+                                  const res = await fetch(`${API}/projects/${item.id}`, { method: "DELETE", headers });
+                                  if (res.ok) {
+                                    if (project?.id === item.id) setActiveProject(null);
+                                    await loadProjects();
+                                    setMessage("Project deleted!");
+                                  }
+                                } catch (e) {
+                                  console.error(e);
+                                }
+                              }
+                            }}
+                            title="Delete this project"
+                          >
+                            🗑
+                          </button>
+                        </div>
+                      </div>
                     ))}
                   </div>
                 )}
