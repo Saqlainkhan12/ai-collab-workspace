@@ -40,6 +40,28 @@ export default function Home() {
   const [chatLoading, setChatLoading] = useState(false);
   const [activeConversation, setActiveConversation] = useState(null);
 
+  // COMMAND PALETTE STATE (Ctrl+K)
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [commandSearch, setCommandSearch] = useState("");
+  const [selectedPaletteIndex, setSelectedPaletteIndex] = useState(0);
+
+  // Global Ctrl+K / Cmd+K listener
+  useEffect(() => {
+    function handleKeyDown(e) {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setCommandPaletteOpen((prev) => !prev);
+        setCommandSearch("");
+        setSelectedPaletteIndex(0);
+      } else if (e.key === "Escape") {
+        setCommandPaletteOpen(false);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   async function loadProjects() {
     try {
       setLoading(true);
@@ -410,6 +432,181 @@ export default function Home() {
 
   const project = activeProject;
 
+  // =========================
+  // COMPUTED COMMAND PALETTE ITEMS
+  // =========================
+  const query = commandSearch.toLowerCase().trim();
+
+  const quickActions = [
+    {
+      id: "action-chat",
+      category: "ACTIONS",
+      icon: "✨",
+      title: "Start New AI Chat",
+      subtitle: activeProject ? `In "${activeProject.name}"` : "Open chat workspace",
+      perform: () => {
+        startNewConversation();
+        setCommandPaletteOpen(false);
+      },
+    },
+    {
+      id: "action-create",
+      category: "ACTIONS",
+      icon: "+",
+      title: "Create New Project",
+      subtitle: "Set up a new workspace",
+      perform: () => {
+        setShowCreate(true);
+        setCommandPaletteOpen(false);
+      },
+    },
+    {
+      id: "action-dashboard",
+      category: "ACTIONS",
+      icon: "⌂",
+      title: "Go to Dashboard",
+      subtitle: "View overview & stats",
+      perform: () => {
+        selectView("dashboard");
+        setCommandPaletteOpen(false);
+      },
+    },
+    {
+      id: "action-projects",
+      category: "ACTIONS",
+      icon: "◈",
+      title: "Browse All Projects",
+      subtitle: `${projects.length} workspaces available`,
+      perform: () => {
+        selectView("projects");
+        setCommandPaletteOpen(false);
+      },
+    },
+    {
+      id: "action-conversations",
+      category: "ACTIONS",
+      icon: "▣",
+      title: "View All Conversations",
+      subtitle: `${conversations.length} chat sessions`,
+      perform: () => {
+        selectView("conversations");
+        setCommandPaletteOpen(false);
+      },
+    },
+    {
+      id: "action-docs",
+      category: "ACTIONS",
+      icon: "◇",
+      title: "Knowledge & Documents",
+      subtitle: `${documents.length} files indexed`,
+      perform: () => {
+        selectView("documents");
+        setCommandPaletteOpen(false);
+      },
+    },
+    {
+      id: "action-team",
+      category: "ACTIONS",
+      icon: "◎",
+      title: "Team & Collaborators",
+      subtitle: `${members.length} team members`,
+      perform: () => {
+        selectView("team");
+        setCommandPaletteOpen(false);
+      },
+    },
+  ].filter(
+    (item) =>
+      !query ||
+      item.title.toLowerCase().includes(query) ||
+      item.subtitle.toLowerCase().includes(query)
+  );
+
+  const projectItems = projects
+    .filter(
+      (p) =>
+        !query ||
+        p.name.toLowerCase().includes(query) ||
+        (p.description && p.description.toLowerCase().includes(query))
+    )
+    .map((p) => ({
+      id: `project-${p.id}`,
+      category: "PROJECTS",
+      icon: p.icon || "✦",
+      title: p.name,
+      subtitle: p.id === activeProject?.id ? "Active Workspace" : p.description || "Project Workspace",
+      isActive: p.id === activeProject?.id,
+      perform: () => {
+        setActiveProject(p);
+        selectView("dashboard");
+        setCommandPaletteOpen(false);
+      },
+    }));
+
+  const conversationItems = conversations
+    .filter(
+      (c) =>
+        !query ||
+        (c.title && c.title.toLowerCase().includes(query)) ||
+        (c.session_id && c.session_id.toLowerCase().includes(query))
+    )
+    .map((c) => ({
+      id: `convo-${c.id}`,
+      category: "CONVERSATIONS",
+      icon: "▣",
+      title: c.title || "Conversation",
+      subtitle: new Date(c.created_at || Date.now()).toLocaleDateString(),
+      perform: () => {
+        openConversation(c);
+        setCommandPaletteOpen(false);
+      },
+    }));
+
+  const documentItems = documents
+    .filter(
+      (d) =>
+        !query ||
+        (d.filename && d.filename.toLowerCase().includes(query))
+    )
+    .map((d) => ({
+      id: `doc-${d.id}`,
+      category: "DOCUMENTS",
+      icon: "◇",
+      title: d.filename,
+      subtitle: `${d.chunk_count || 0} chunks`,
+      perform: () => {
+        selectView("documents");
+        setCommandPaletteOpen(false);
+      },
+    }));
+
+  const memberItems = members
+    .filter(
+      (m) =>
+        !query ||
+        (m.name && m.name.toLowerCase().includes(query)) ||
+        (m.email && m.email.toLowerCase().includes(query))
+    )
+    .map((m) => ({
+      id: `member-${m.id}`,
+      category: "TEAM",
+      icon: "◎",
+      title: m.name,
+      subtitle: `${m.email} · ${m.role}`,
+      perform: () => {
+        selectView("team");
+        setCommandPaletteOpen(false);
+      },
+    }));
+
+  const allPaletteItems = [
+    ...quickActions,
+    ...projectItems,
+    ...conversationItems,
+    ...documentItems,
+    ...memberItems,
+  ];
+
   return (
     <main className="workspace">
       {/* MOBILE TOP BAR */}
@@ -434,23 +631,39 @@ export default function Home() {
           </div>
         </div>
 
-        {view !== "chat" ? (
+        <div className="mobile-header-actions">
           <button
             type="button"
-            className="mobile-action-btn"
-            onClick={() => setShowCreate(true)}
+            className="mobile-search-btn"
+            onClick={() => {
+              setCommandPaletteOpen(true);
+              setCommandSearch("");
+              setSelectedPaletteIndex(0);
+            }}
+            aria-label="Quick Search"
+            title="Quick Search (Ctrl+K)"
           >
-            + New
+            🔍
           </button>
-        ) : (
-          <button
-            type="button"
-            className="mobile-action-btn"
-            onClick={() => selectView("conversations")}
-          >
-            Chats
-          </button>
-        )}
+
+          {view !== "chat" ? (
+            <button
+              type="button"
+              className="mobile-action-btn"
+              onClick={() => setShowCreate(true)}
+            >
+              + New
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="mobile-action-btn"
+              onClick={() => selectView("conversations")}
+            >
+              Chats
+            </button>
+          )}
+        </div>
       </header>
 
       {/* MOBILE BACKDROP */}
@@ -562,14 +775,38 @@ export default function Home() {
             </p>
           </div>
 
-          {view !== "chat" && (
+          <div className="topbar-actions">
             <button
-              className="create-btn"
-              onClick={() => setShowCreate(true)}
+              type="button"
+              className="quick-search-trigger"
+              onClick={() => {
+                setCommandPaletteOpen(true);
+                setCommandSearch("");
+                setSelectedPaletteIndex(0);
+              }}
+              title="Quick Search & Actions (Ctrl+K)"
             >
-              + New Project
+              <span className="search-icon">🔍</span>
+              <span className="search-text">Search anything...</span>
+              <span className="search-kbd">Ctrl K</span>
             </button>
-          )}
+
+            {view !== "chat" ? (
+              <button
+                className="create-btn"
+                onClick={() => setShowCreate(true)}
+              >
+                + New Project
+              </button>
+            ) : (
+              <button
+                className="create-btn"
+                onClick={startNewConversation}
+              >
+                + New Chat
+              </button>
+            )}
+          </div>
         </header>
 
         {message && (
@@ -1234,6 +1471,120 @@ export default function Home() {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* COMMAND PALETTE (CTRL+K) MODAL */}
+      {commandPaletteOpen && (
+        <div
+          className="command-palette-backdrop"
+          onClick={() => setCommandPaletteOpen(false)}
+        >
+          <div
+            className="command-palette-card"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="command-palette-header">
+              <span className="command-palette-icon">🔍</span>
+              <input
+                type="text"
+                className="command-palette-input"
+                placeholder="Type a command, project, chat or file..."
+                value={commandSearch}
+                onChange={(e) => {
+                  setCommandSearch(e.target.value);
+                  setSelectedPaletteIndex(0);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "ArrowDown") {
+                    e.preventDefault();
+                    setSelectedPaletteIndex((prev) =>
+                      allPaletteItems.length > 0
+                        ? (prev + 1) % allPaletteItems.length
+                        : 0
+                    );
+                  } else if (e.key === "ArrowUp") {
+                    e.preventDefault();
+                    setSelectedPaletteIndex((prev) =>
+                      allPaletteItems.length > 0
+                        ? (prev - 1 + allPaletteItems.length) % allPaletteItems.length
+                        : 0
+                    );
+                  } else if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (allPaletteItems[selectedPaletteIndex]) {
+                      allPaletteItems[selectedPaletteIndex].perform();
+                    }
+                  }
+                }}
+                autoFocus
+              />
+              {commandSearch && (
+                <button
+                  type="button"
+                  className="command-palette-clear"
+                  onClick={() => {
+                    setCommandSearch("");
+                    setSelectedPaletteIndex(0);
+                  }}
+                  title="Clear search"
+                >
+                  ✕
+                </button>
+              )}
+              <span className="command-palette-badge">ESC</span>
+            </div>
+
+            <div className="command-palette-list">
+              {allPaletteItems.length === 0 ? (
+                <div className="command-palette-empty">
+                  <span>No results found for "{commandSearch}"</span>
+                </div>
+              ) : (
+                allPaletteItems.map((item, index) => {
+                  const isSelected = index === selectedPaletteIndex;
+                  return (
+                    <div
+                      key={item.id}
+                      className={`command-palette-row ${isSelected ? "selected" : ""}`}
+                      onMouseEnter={() => setSelectedPaletteIndex(index)}
+                      onClick={() => item.perform()}
+                    >
+                      <div className="command-palette-row-left">
+                        <span className="command-row-icon">{item.icon}</span>
+                        <div className="command-row-texts">
+                          <span className="command-row-title">
+                            {item.title}
+                            {item.isActive && (
+                              <span className="command-row-active-tag">Active</span>
+                            )}
+                          </span>
+                          <span className="command-row-sub">{item.subtitle}</span>
+                        </div>
+                      </div>
+                      <div className="command-palette-row-right">
+                        <span className="command-row-category">{item.category}</span>
+                        {isSelected && (
+                          <span className="command-row-enter">↵</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            <div className="command-palette-footer">
+              <div className="command-footer-hints">
+                <span><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>
+                <span><kbd>↵</kbd> Select</span>
+                <span><kbd>esc</kbd> Close</span>
+              </div>
+              <div className="command-footer-brand">
+                <span>COLLAB AI COMMAND</span>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </main>
