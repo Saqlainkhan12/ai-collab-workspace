@@ -81,6 +81,12 @@ export default function Home() {
   const [runningAgent, setRunningAgent] = useState(false);
   const [automationLogs, setAutomationLogs] = useState([]);
 
+  // REAL-TIME ACTIVITY FEED & NOTIFICATIONS STATE (Feature 3)
+  const [activities, setActivities] = useState([]);
+  const [showActivityDrawer, setShowActivityDrawer] = useState(false);
+  const [activityFilter, setActivityFilter] = useState("all"); // "all" | "task" | "doc" | "team" | "agent"
+  const [unreadActivityCount, setUnreadActivityCount] = useState(0);
+
   const themes = [
     { id: "obsidian", name: "Obsidian Slate", color: "#58a6ff", desc: "Clean Modern Dark" },
     { id: "ocean", name: "Ocean Deep", color: "#38bdf8", desc: "Sapphire Blue" },
@@ -316,6 +322,63 @@ export default function Home() {
     }
   }
 
+  // REAL-TIME ACTIVITY FEED FUNCTIONS (Feature 3)
+  async function loadActivities() {
+    if (!activeProject) return;
+    try {
+      const response = await fetch(`${API}/projects/${activeProject.id}/activity`, { headers });
+      if (response.ok) {
+        const data = await response.json();
+        setActivities(data);
+      }
+    } catch (error) {
+      console.error("Activities fetch:", error);
+    }
+  }
+
+  async function logActivity(action_type, title, details = "") {
+    if (!activeProject) return;
+    try {
+      const response = await fetch(`${API}/projects/${activeProject.id}/activity`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ action_type, title, details, user_name: "Saqlain" }),
+      });
+      if (response.ok) {
+        const newLog = await response.json();
+        setActivities((prev) => [newLog, ...prev]);
+        setUnreadActivityCount((prev) => prev + 1);
+      }
+    } catch (error) {
+      console.error("Log activity error:", error);
+    }
+  }
+
+  async function clearActivities() {
+    if (!activeProject) return;
+    try {
+      await fetch(`${API}/projects/${activeProject.id}/activity`, { method: "DELETE", headers });
+      setActivities([]);
+      setUnreadActivityCount(0);
+      setMessage("Activity feed cleared.");
+    } catch (error) {
+      console.error("Clear activity error:", error);
+    }
+  }
+
+  function formatRelativeTime(dateString) {
+    if (!dateString) return "Just now";
+    const now = new Date();
+    const past = new Date(dateString);
+    const diffSec = Math.max(0, Math.floor((now - past) / 1000));
+    if (diffSec < 60) return "Just now";
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHours = Math.floor(diffMin / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return `${Math.floor(diffHours / 24)}d ago`;
+  }
+
   async function uploadDocument(event) {
     const file = event.target.files?.[0];
 
@@ -350,6 +413,7 @@ export default function Home() {
       );
 
       await loadDocuments();
+      logActivity("doc", "Document Uploaded", `Uploaded "${file.name}" (${result.chunks || 0} chunks)`);
     } catch (error) {
       console.error(error);
       setMessage("Document upload failed.");
@@ -385,6 +449,7 @@ export default function Home() {
       setMessage(`Website indexed: "${data.filename}" (${data.chunks} chunks).`);
       setUrlInput("");
       await loadDocuments();
+      logActivity("doc", "Web URL Indexed", `Indexed "${data.filename}" (${data.chunks} chunks)`);
     } catch (error) {
       console.error("URL Ingestion Error:", error);
       setMessage(`URL import failed: ${error.message}`);
@@ -480,6 +545,7 @@ export default function Home() {
       setTaskAssignee("");
       setShowCreateTask(false);
       setMessage("Task create ho gaya!");
+      logActivity("task", "New Task Created", `Added "${taskTitle.trim()}" [${taskPriority.toUpperCase()}]`);
     } catch (error) {
       console.error(error);
       setMessage("Task create nahi ho saka.");
@@ -490,6 +556,7 @@ export default function Home() {
     if (!activeProject) return;
 
     try {
+      const taskObj = tasks.find((t) => t.id === taskId);
       setTasks((current) =>
         current.map((t) =>
           t.id === taskId ? { ...t, status: newStatus } : t
@@ -504,6 +571,7 @@ export default function Home() {
           body: JSON.stringify({ status: newStatus }),
         }
       );
+      logActivity("task", "Task Moved", `"${taskObj?.title || 'Task'}" moved to ${newStatus.toUpperCase()}`);
     } catch (error) {
       console.error(error);
       await loadTasks();
@@ -809,6 +877,7 @@ export default function Home() {
       setNewMemberEmail("");
       setShowAddMember(false);
       await loadMembers();
+      logActivity("team", "Team Member Invited", `Invited "${newMemberEmail.trim()}" as ${newMemberRole.toUpperCase()}`);
     } catch (err) {
       console.error(err);
       setMessage("Member add karne mein masla hua.");
@@ -958,6 +1027,7 @@ export default function Home() {
         ]);
         setMessage("AI Agent workflow finished!");
       }
+      logActivity("agent", "AI Agent Workflow Executed", `Ran AI Agent: ${agentType.toUpperCase()}`);
     } catch (err) {
       console.error(err);
     } finally {
@@ -1683,6 +1753,24 @@ export default function Home() {
                 ))}
               </div>
             </div>
+
+            {/* REAL-TIME ACTIVITY FEED TRIGGER (Feature 3) */}
+            <button
+              type="button"
+              className="activity-feed-trigger-btn"
+              onClick={() => {
+                setShowActivityDrawer(true);
+                setUnreadActivityCount(0);
+                loadActivities();
+              }}
+              title="Team Activity Feed & Live Notifications"
+            >
+              <span className="activity-bell-icon">🔔</span>
+              <span className="activity-trigger-text">Activity</span>
+              {unreadActivityCount > 0 && (
+                <span className="activity-unread-badge">{unreadActivityCount}</span>
+              )}
+            </button>
 
             {project && (
               <>
@@ -3353,6 +3441,120 @@ export default function Home() {
               >
                 CLOSE
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* REAL-TIME TEAM ACTIVITY FEED DRAWER (Feature 3) */}
+      {showActivityDrawer && (
+        <div
+          className="activity-drawer-backdrop"
+          onClick={() => setShowActivityDrawer(false)}
+        >
+          <div
+            className="activity-drawer"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="activity-drawer-header">
+              <div className="activity-header-title">
+                <span className="activity-bell-icon">🔔</span>
+                <div>
+                  <h3>Team Activity Feed</h3>
+                  <span>Live workspace updates & notifications</span>
+                </div>
+              </div>
+
+              <div className="activity-header-actions">
+                <button
+                  type="button"
+                  className="activity-clear-btn"
+                  onClick={clearActivities}
+                  title="Clear all activity history"
+                >
+                  Clear History
+                </button>
+                <button
+                  type="button"
+                  className="activity-close-btn"
+                  onClick={() => setShowActivityDrawer(false)}
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* FILTER BAR */}
+            <div className="activity-filter-bar">
+              {[
+                { id: "all", label: "All Activity" },
+                { id: "task", label: "Tasks" },
+                { id: "doc", label: "Knowledge" },
+                { id: "team", label: "Team" },
+                { id: "agent", label: "AI Agents" },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  className={`activity-filter-pill ${activityFilter === tab.id ? "active" : ""}`}
+                  onClick={() => setActivityFilter(tab.id)}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* ACTIVITY TIMELINE ITEMS */}
+            <div className="activity-items-list">
+              {activities
+                .filter((a) => (activityFilter === "all" ? true : a.action_type === activityFilter))
+                .length === 0 ? (
+                <div className="activity-empty-state">
+                  <span className="empty-bell">🔔</span>
+                  <h4>No activity logged yet</h4>
+                  <p>Actions like document uploads, task updates, member invites, and AI agent runs will appear here live.</p>
+                </div>
+              ) : (
+                activities
+                  .filter((a) => (activityFilter === "all" ? true : a.action_type === activityFilter))
+                  .map((act) => (
+                    <div key={act.id} className="activity-card-item">
+                      <div className={`activity-icon-badge ${act.action_type || "general"}`}>
+                        {act.action_type === "doc"
+                          ? "📁"
+                          : act.action_type === "task"
+                          ? "✓"
+                          : act.action_type === "team"
+                          ? "👥"
+                          : act.action_type === "agent"
+                          ? "⚡"
+                          : "✦"}
+                      </div>
+
+                      <div className="activity-content-wrap">
+                        <div className="activity-title-row">
+                          <strong>{act.title}</strong>
+                          <span className="activity-timestamp">
+                            {formatRelativeTime(act.created_at)}
+                          </span>
+                        </div>
+
+                        {act.details && (
+                          <p className="activity-desc-text">{act.details}</p>
+                        )}
+
+                        <div className="activity-meta-bottom">
+                          <span className="activity-author">
+                            by {act.user_name || "Saqlain"}
+                          </span>
+                          <span className={`activity-type-tag ${act.action_type}`}>
+                            {act.action_type?.toUpperCase()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+              )}
             </div>
           </div>
         </div>

@@ -149,6 +149,19 @@ export async function ensureDbInitialized() {
       );
     `;
 
+    // 10. Activity Logs & Notifications (Feature 3)
+    await sql`
+      CREATE TABLE IF NOT EXISTS activity_logs (
+        id SERIAL PRIMARY KEY,
+        project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE,
+        user_name VARCHAR(150) NOT NULL DEFAULT 'Saqlain',
+        action_type VARCHAR(50) NOT NULL,
+        title VARCHAR(300) NOT NULL,
+        details TEXT,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+
     isInitialized = true;
   } catch (error) {
     console.error("Database initialization error:", error);
