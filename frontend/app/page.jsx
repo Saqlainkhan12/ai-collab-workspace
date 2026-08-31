@@ -87,6 +87,17 @@ export default function Home() {
   const [activityFilter, setActivityFilter] = useState("all"); // "all" | "task" | "doc" | "team" | "agent"
   const [unreadActivityCount, setUnreadActivityCount] = useState(0);
 
+  // AUTONOMOUS DEEP RESEARCH STATE (Feature 5)
+  const [deepResearchEnabled, setDeepResearchEnabled] = useState(false);
+
+  // GEMINI LIVE / CHATGPT TWO-WAY VOICE MODE STATE (Feature 3)
+  const [liveVoiceOpen, setLiveVoiceOpen] = useState(false);
+  const [liveVoiceListening, setLiveVoiceListening] = useState(false);
+  const [liveVoiceSpeaking, setLiveVoiceSpeaking] = useState(false);
+  const [liveVoiceTranscript, setLiveVoiceTranscript] = useState("");
+  const [liveVoiceAiReply, setLiveVoiceAiReply] = useState("");
+  const [liveVoiceStatus, setLiveVoiceStatus] = useState("Tap orb to speak");
+
   const themes = [
     { id: "obsidian", name: "Obsidian Slate", color: "#58a6ff", desc: "Clean Modern Dark" },
     { id: "ocean", name: "Ocean Deep", color: "#38bdf8", desc: "Sapphire Blue" },
@@ -756,6 +767,134 @@ export default function Home() {
     window.speechSynthesis.speak(utterance);
   }
 
+  // ============================================================
+  // GEMINI LIVE / CHATGPT TWO-WAY VOICE MODE (Feature 3)
+  // ============================================================
+
+  function startLiveVoiceSession() {
+    if (!activeProject) {
+      setMessage("Pehle project select karein.");
+      return;
+    }
+    const SpeechRecognition = typeof window !== "undefined" ? (window.SpeechRecognition || window.webkitSpeechRecognition) : null;
+    if (!SpeechRecognition) {
+      alert("Aapka browser Speech Recognition support nahi karta. Google Chrome ya Edge use karein.");
+      return;
+    }
+
+    setLiveVoiceOpen(true);
+    setLiveVoiceTranscript("");
+    setLiveVoiceAiReply("");
+    setLiveVoiceStatus("Listening... bolna shuru karein");
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.lang = "en-US";
+
+      recognition.onstart = () => {
+        setLiveVoiceListening(true);
+        setLiveVoiceStatus("Listening to your voice...");
+      };
+
+      let finalCaptured = "";
+      recognition.onresult = (event) => {
+        let text = "";
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          text += event.results[i][0].transcript;
+        }
+        finalCaptured = text;
+        setLiveVoiceTranscript(text);
+      };
+
+      recognition.onerror = (e) => {
+        console.error("Live voice error:", e);
+        setLiveVoiceListening(false);
+        setLiveVoiceStatus("Tap orb to speak again");
+      };
+
+      recognition.onend = () => {
+        setLiveVoiceListening(false);
+        if (finalCaptured.trim()) {
+          processLiveVoiceQuery(finalCaptured.trim());
+        } else {
+          setLiveVoiceStatus("Tap orb to speak");
+        }
+      };
+
+      window._liveVoiceRec = recognition;
+      recognition.start();
+    } catch (err) {
+      console.error(err);
+      setLiveVoiceListening(false);
+    }
+  }
+
+  async function processLiveVoiceQuery(userVoiceText) {
+    setLiveVoiceStatus("AI is thinking...");
+    try {
+      const response = await fetch(`${API}/projects/${activeProject.id}/chat`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          message: userVoiceText,
+          session_id: activeConversation?.session_id || null,
+          title: activeConversation?.title || null,
+          web_search: webSearchEnabled,
+        }),
+      });
+
+      if (!response.ok) throw new Error(await response.text());
+      const data = await response.json();
+      setLiveVoiceAiReply(data.answer);
+      setLiveVoiceStatus("AI is speaking...");
+
+      // Speak response
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+        const cleanSpeech = (data.answer || "")
+          .replace(/```[\s\S]*?```/g, "Code block omitted.")
+          .replace(/[#*`_~|]/g, "")
+          .replace(/\[\d+\]/g, "");
+
+        const utterance = new SpeechSynthesisUtterance(cleanSpeech);
+        utterance.rate = 1.05;
+        utterance.pitch = 1.0;
+
+        utterance.onstart = () => setLiveVoiceSpeaking(true);
+        utterance.onend = () => {
+          setLiveVoiceSpeaking(false);
+          setLiveVoiceStatus("Tap orb to respond");
+        };
+        utterance.onerror = () => {
+          setLiveVoiceSpeaking(false);
+          setLiveVoiceStatus("Tap orb to respond");
+        };
+
+        window.speechSynthesis.speak(utterance);
+      }
+    } catch (err) {
+      console.error("Live voice query failed:", err);
+      setLiveVoiceStatus("Error getting AI response");
+      setLiveVoiceSpeaking(false);
+    }
+  }
+
+  function stopLiveVoiceSession() {
+    if (typeof window !== "undefined") {
+      if (window._liveVoiceRec) {
+        window._liveVoiceRec.stop();
+      }
+      if ("speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+    }
+    setLiveVoiceOpen(false);
+    setLiveVoiceListening(false);
+    setLiveVoiceSpeaking(false);
+  }
+
   async function sendMessage(event) {
     event?.preventDefault();
 
@@ -800,6 +939,7 @@ export default function Home() {
             session_id: activeConversation?.session_id || null,
             title: activeConversation?.title || null,
             web_search: webSearchEnabled,
+            deep_research: deepResearchEnabled,
           }),
         }
       );
@@ -824,6 +964,7 @@ export default function Home() {
           content: data.answer,
           model_used: data.model,
           web_sources: data.web_sources || [],
+          is_deep_research: Boolean(data.is_deep_research),
         },
       ]);
 
@@ -2509,13 +2650,22 @@ export default function Home() {
                                 </div>
 
                                 <div className="human-assistant-body">
+                                  {item.is_deep_research && (
+                                    <div className="deep-research-banner-badge">
+                                      <span>🔬 AUTONOMOUS DEEP RESEARCH DOSSIER</span>
+                                    </div>
+                                  )}
+
                                   {renderFormattedContent(item.content)}
 
                                   {/* REAL-TIME LIVE WEB CITATIONS */}
                                   {item.web_sources && item.web_sources.length > 0 && (
                                     <div className="web-citations-container">
                                       <div className="web-citations-head">
-                                        <span>🌐 Real-Time Web Sources ({item.web_sources.length}):</span>
+                                        <span>
+                                          {item.is_deep_research ? "🔬 Deep Research Citations Matrix (" : "🌐 Real-Time Web Sources ("}
+                                          {item.web_sources.length}):
+                                        </span>
                                       </div>
                                       <div className="web-citations-grid">
                                         {item.web_sources.map((src, sIdx) => (
@@ -2548,7 +2698,11 @@ export default function Home() {
                                 <div className="human-assistant-avatar pulsing">✦</div>
                                 <span className="human-assistant-name">COLLAB AI</span>
                                 <span className="human-thinking-tag">
-                                  {webSearchEnabled ? "Searching web & generating answer..." : "Thinking..."}
+                                  {deepResearchEnabled
+                                    ? "🔬 Multi-crawling web sources & synthesizing Deep Research Dossier..."
+                                    : webSearchEnabled
+                                    ? "Searching web & generating answer..."
+                                    : "Thinking..."}
                                 </span>
                               </div>
 
@@ -2608,10 +2762,38 @@ export default function Home() {
                             className={`web-search-toggle-btn ${
                               webSearchEnabled ? "active" : ""
                             }`}
-                            onClick={() => setWebSearchEnabled((prev) => !prev)}
+                            onClick={() => {
+                              setWebSearchEnabled((prev) => !prev);
+                              if (!webSearchEnabled) setDeepResearchEnabled(false);
+                            }}
                             title="Toggle Real-Time Web Search (Perplexity Mode)"
                           >
                             🌐 {webSearchEnabled ? "Web Search: ON" : "Web Search: OFF"}
+                          </button>
+
+                          {/* AUTONOMOUS DEEP RESEARCH TOGGLE (Feature 5) */}
+                          <button
+                            type="button"
+                            className={`deep-research-toggle-btn ${
+                              deepResearchEnabled ? "active" : ""
+                            }`}
+                            onClick={() => {
+                              setDeepResearchEnabled((prev) => !prev);
+                              if (!deepResearchEnabled) setWebSearchEnabled(false);
+                            }}
+                            title="Toggle Autonomous Multi-Source Deep Research Mode"
+                          >
+                            🔬 {deepResearchEnabled ? "Deep Research: ON" : "Deep Research: OFF"}
+                          </button>
+
+                          {/* GEMINI LIVE 3D ORB VOICE MODE (Feature 3) */}
+                          <button
+                            type="button"
+                            className="live-orb-voice-btn"
+                            onClick={startLiveVoiceSession}
+                            title="Open Full-Screen Gemini Live Two-Way Voice Mode"
+                          >
+                            🎙️ Live Voice
                           </button>
 
                           {/* VOICE SPEECH-TO-TEXT MIC BUTTON */}
@@ -2625,7 +2807,7 @@ export default function Home() {
                                 : "Click to speak (Voice Dictation)"
                             }
                           >
-                            🎙️ {isListening ? "Listening..." : "Voice"}
+                            🎙️ {isListening ? "Listening..." : "Dictate"}
                           </button>
                         </div>
 
@@ -3555,6 +3737,104 @@ export default function Home() {
                     </div>
                   ))
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* GEMINI LIVE / CHATGPT TWO-WAY VOICE 3D ORB MODAL (Feature 3) */}
+      {liveVoiceOpen && (
+        <div className="live-voice-full-modal">
+          <div className="live-voice-backdrop" />
+          <div className="live-voice-container">
+            <div className="live-voice-top">
+              <div className="live-voice-brand">
+                <span className="live-brand-sparkle">✦</span>
+                <strong>GEMINI LIVE CONVERSATION</strong>
+                <span className="live-badge-active">REAL-TIME VOICE</span>
+              </div>
+              <button
+                type="button"
+                className="live-voice-close"
+                onClick={stopLiveVoiceSession}
+                title="End Voice Session (Esc)"
+              >
+                ✕ End
+              </button>
+            </div>
+
+            {/* 3D GLOWING AUDIO ORB */}
+            <div className="live-orb-stage">
+              <div
+                className={`glowing-3d-orb ${
+                  liveVoiceSpeaking
+                    ? "speaking"
+                    : liveVoiceListening
+                    ? "listening"
+                    : "idle"
+                }`}
+                onClick={() => {
+                  if (liveVoiceSpeaking) {
+                    if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+                    setLiveVoiceSpeaking(false);
+                  } else {
+                    startLiveVoiceSession();
+                  }
+                }}
+                title="Tap orb to speak or interrupt"
+              >
+                <div className="orb-inner-core" />
+                <div className="orb-ring ring-1" />
+                <div className="orb-ring ring-2" />
+                <div className="orb-ring ring-3" />
+              </div>
+
+              <div className="live-orb-status-text">
+                {liveVoiceSpeaking ? "AI is speaking..." : liveVoiceListening ? "Listening to your voice..." : liveVoiceStatus}
+              </div>
+            </div>
+
+            {/* LIVE SUBTITLES & TRANSCRIPT */}
+            <div className="live-voice-subtitles-box">
+              {liveVoiceTranscript && (
+                <div className="live-subtitle-user">
+                  <span className="subtitle-label">You:</span>
+                  <p>{liveVoiceTranscript}</p>
+                </div>
+              )}
+
+              {liveVoiceAiReply && (
+                <div className="live-subtitle-ai">
+                  <span className="subtitle-label">AI:</span>
+                  <p>{liveVoiceAiReply}</p>
+                </div>
+              )}
+            </div>
+
+            {/* LIVE VOICE CONTROLS */}
+            <div className="live-voice-controls">
+              <button
+                type="button"
+                className={`live-control-btn ${liveVoiceListening ? "active" : ""}`}
+                onClick={() => {
+                  if (liveVoiceListening && window._liveVoiceRec) {
+                    window._liveVoiceRec.stop();
+                    setLiveVoiceListening(false);
+                  } else {
+                    startLiveVoiceSession();
+                  }
+                }}
+              >
+                {liveVoiceListening ? "🎙️ Listening (Speak now)" : "🎙️ Tap to Speak"}
+              </button>
+
+              <button
+                type="button"
+                className="live-control-btn end-btn"
+                onClick={stopLiveVoiceSession}
+              >
+                🔴 End Conversation
+              </button>
             </div>
           </div>
         </div>

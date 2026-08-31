@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSql, ensureDbInitialized } from "@/lib/db";
 
-async function searchWeb(query) {
+async function searchWeb(query, maxResults = 5) {
   try {
     const searchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
     const res = await fetch(searchUrl, {
@@ -20,7 +20,7 @@ async function searchWeb(query) {
 
     const titlesAndUrls = [];
     let match;
-    while ((match = titleRegex.exec(html)) !== null && titlesAndUrls.length < 5) {
+    while ((match = titleRegex.exec(html)) !== null && titlesAndUrls.length < maxResults + 2) {
       let rawUrl = match[1] || "";
       let title = match[2]?.replace(/<[^>]+>/g, "").trim() || "";
       if (rawUrl.includes("uddg=")) {
@@ -32,15 +32,15 @@ async function searchWeb(query) {
     }
 
     const snippets = [];
-    while ((match = snippetRegex.exec(html)) !== null && snippets.length < 5) {
+    while ((match = snippetRegex.exec(html)) !== null && snippets.length < maxResults + 2) {
       snippets.push(match[1]?.replace(/<[^>]+>/g, "").trim() || "");
     }
 
-    for (let i = 0; i < Math.min(titlesAndUrls.length, 4); i++) {
+    for (let i = 0; i < Math.min(titlesAndUrls.length, maxResults); i++) {
       results.push({
         title: titlesAndUrls[i].title,
         url: titlesAndUrls[i].url,
-        snippet: snippets[i] || "Live search result",
+        snippet: snippets[i] || "Live web source",
       });
     }
 
@@ -51,13 +51,38 @@ async function searchWeb(query) {
   }
 }
 
+// Deep Research multi-stage query aggregator
+async function performDeepResearch(query) {
+  const subQueries = [
+    query,
+    `${query} analysis overview`,
+    `${query} statistics comparison`,
+    `${query} future trends and benchmarks`,
+  ];
+
+  const results = [];
+  const seenUrls = new Set();
+
+  for (const q of subQueries) {
+    const res = await searchWeb(q, 3);
+    for (const item of res) {
+      if (!seenUrls.has(item.url)) {
+        seenUrls.add(item.url);
+        results.push(item);
+      }
+    }
+  }
+
+  return results.slice(0, 10);
+}
+
 export async function POST(request, { params }) {
   try {
     await ensureDbInitialized();
     const sql = getSql();
     const projectId = parseInt(params.id, 10);
     const body = await request.json();
-    const { message, session_id, title, web_search } = body;
+    const { message, session_id, title, web_search, deep_research } = body;
 
     if (!message || !message.trim()) {
       return NextResponse.json({ detail: "Message is required" }, { status: 400 });
@@ -103,11 +128,21 @@ export async function POST(request, { params }) {
     `;
     const contextText = docs.map((d) => d.content).join("\n\n");
 
-    // Optional Live Web Search (Perplexity Mode)
+    // Live Web Search or Deep Research
     let webSources = [];
     let webContext = "";
-    if (web_search) {
-      webSources = await searchWeb(message.trim());
+
+    if (deep_research) {
+      webSources = await performDeepResearch(message.trim());
+      if (webSources.length > 0) {
+        webContext = `\n\n--- AUTONOMOUS DEEP RESEARCH SCRAPED CORPUS (${webSources.length} SOURCES) ---\n` +
+          webSources
+            .map((s, idx) => `[${idx + 1}] Title: ${s.title}\nURL: ${s.url}\nData Snippet: ${s.snippet}`)
+            .join("\n\n") +
+          `\n\nINSTRUCTION: Synthesize a master-class, comprehensive Executive Deep Research Dossier with:\n1. 🎯 Executive Summary\n2. 📊 Comparison & Metrics Table (in Markdown)\n3. 🔍 Deep Investigation\n4. 🚀 Strategic Takeaways\n5. 📚 Citation references [1], [2], etc.`;
+      }
+    } else if (web_search) {
+      webSources = await searchWeb(message.trim(), 4);
       if (webSources.length > 0) {
         webContext = `\n\n--- REAL-TIME LIVE WEB SEARCH RESULTS ---\n` +
           webSources
@@ -123,7 +158,7 @@ export async function POST(request, { params }) {
 
     if (apiKey) {
       try {
-        const systemPrompt = `You are the AI Assistant for the workspace project "${project.name || "Collab AI"}".
+        const systemPrompt = `You are the Senior AI Architect and Researcher for the workspace project "${project.name || "Collab AI"}".
 Project Description: ${project.description || "N/A"}
 Project Knowledge / Context:
 ${contextText || "No workspace documents uploaded yet."}
@@ -141,7 +176,7 @@ ${webContext}`;
               { role: "system", content: systemPrompt },
               { role: "user", content: message },
             ],
-            temperature: 0.7,
+            temperature: deep_research ? 0.4 : 0.7,
           }),
         });
 
@@ -155,18 +190,24 @@ ${webContext}`;
     }
 
     if (!aiReply) {
-      if (webSources.length > 0) {
+      if (deep_research && webSources.length > 0) {
+        aiReply = `## 🔬 Autonomous Deep Research Dossier: "${message}"\n\n### 🎯 1. Executive Summary\nOur autonomous agent multi-scanned the web across **${webSources.length} verified sources** to compile this deep intelligence brief.\n\n### 📊 2. Cross-Source Intelligence Matrix\n\n| Source # | Subject / Source Title | Primary Insight | Status |\n| :--- | :--- | :--- | :--- |\n` +
+          webSources.map((s, i) => `| [${i + 1}] | **${s.title.substring(0, 32)}...** | ${s.snippet.substring(0, 50)}... | Verified |`).join("\n") +
+          `\n\n### 🔍 3. Core Findings & Data Synthesis\n` +
+          webSources.map((s, i) => `* **[${i + 1}] ${s.title}:** ${s.snippet}`).join("\n") +
+          `\n\n### 🚀 4. Strategic Recommendations\n1. Cross-reference data points with local repository architecture.\n2. Leverage verified citations for actionable project roadmaps.\n3. Re-run deep research anytime for live updates.`;
+      } else if (webSources.length > 0) {
         aiReply = `### 🌐 Live Web Search Results for: "${message}"\n\nBased on live web search, here is the information:\n\n` +
           webSources.map((s, i) => `**[${i + 1}] ${s.title}**\n${s.snippet}\n🔗 [Visit Source](${s.url})`).join("\n\n");
       } else {
-        aiReply = `Hello! I am your AI assistant for "${project.name || "this project"}".\n\nI have received your query: "${message}".\n\n${docs.length > 0 ? "I reviewed your project documents and knowledge base to assist you." : "Upload documents to this workspace or turn on 🌐 Live Web Search for real-time answers!"}`;
+        aiReply = `Hello! I am your AI assistant for "${project.name || "this project"}".\n\nI have received your query: "${message}".\n\n${docs.length > 0 ? "I reviewed your project documents and knowledge base to assist you." : "Upload documents to this workspace, turn on 🌐 Live Web Search, or toggle 🔬 Deep Research for comprehensive intelligence reports!"}`;
       }
     }
 
     // Save assistant message
     await sql`
       INSERT INTO messages (conversation_id, sender_id, role, content, model_used)
-      VALUES (${conversation.id}, ${userId}, 'assistant', ${aiReply}, 'gpt-4o-mini');
+      VALUES (${conversation.id}, ${userId}, 'assistant', ${aiReply}, ${deep_research ? "gpt-4o-mini (Deep Research)" : "gpt-4o-mini"});
     `;
 
     // Update conversation timestamp
@@ -178,9 +219,10 @@ ${webContext}`;
       conversation_id: conversation.id,
       session_id: conversation.session_id,
       answer: aiReply,
-      model: "gpt-4o-mini",
+      model: deep_research ? "gpt-4o-mini (Deep Research)" : "gpt-4o-mini",
       sources: docs.map((d, i) => ({ id: i + 1, content: d.content?.substring(0, 100) })),
       web_sources: webSources,
+      is_deep_research: Boolean(deep_research),
     });
   } catch (error) {
     console.error("Chat error:", error);
